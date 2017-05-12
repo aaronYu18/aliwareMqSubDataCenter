@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.courier.db.dao.ApiConfigMapper">
+    <select id="getSourceNames" resultType="java.lang.String">
+      select distinct name from apiconfig
+    </select>
+    <select id="getBySource" resultType="com.courier.db.entity.ApiConfig">
+        select * from apiconfig WHERE source = #{source} limit 1;
+    </select>
+</mapper>

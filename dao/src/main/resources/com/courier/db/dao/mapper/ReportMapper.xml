@@ -1,0 +1,236 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.courier.db.dao.ReportMapper">
+    <!--  多条件查询  -->
+    <select id="findByFilters" resultType="com.courier.db.entity.Report">
+        SELECT * FROM report WHERE 1=1
+        <if test="userId != null"> and userId = #{userId} </if>
+        <if test="beginT != null"> and countTime &gt;= #{beginT} </if>
+        <if test="endT != null"> and countTime &lt;= #{endT} </if>
+        <if test="types != null">and `type` in
+            <foreach collection="types" index="index" item="item" open="(" separator="," close=")">#{item}</foreach>
+        </if>
+        <if test="sendNoGreatEqual != null">
+            AND sendNo &gt;= #{sendNoGreatEqual}
+        </if>
+        <if test="sortType != null"> order by countTime #{sortType} </if>
+        <if test="index != null and limit != null">
+            limit #{index}, #{limit}
+        </if>
+    </select>
+    <!--  多条件查询  -->
+    <select id="findOneByKeys" resultType="com.courier.db.entity.Report">
+        SELECT * FROM report WHERE 1=1
+        <if test="userId != null and userId != ''"> and userId = #{userId} </if>
+        <if test="countTime != null and countTime != ''"> and countTime = #{countTime} </if>
+        <if test="type != null and type != ''">and `type` = #{type} </if>
+        limit 1
+    </select>
+
+    <!--  多条件查询  -->
+    <select id="buildByFilters" resultType="com.courier.db.entity.Report">
+        SELECT
+            <if test="groupBy != null">userId, </if>
+            IFNULL(sum(sendNo), 0) sendNo,
+            IFNULL(sum(collectNo), 0) collectNo,
+            IFNULL(sum(failedNo), 0) failedNo,
+            #{code} as `type`,
+            #{countT} as countTime
+        FROM report WHERE 1=1
+        <if test="types != null"> and `type` in
+            <foreach collection="types" index="index" item="item" open="(" separator="," close=")">#{item}</foreach>
+        </if>
+        <if test="beginT != null"> and countTime &gt;= #{beginT} </if>
+        <if test="endT != null"> and countTime &lt;= #{endT} </if>
+        <if test="groupBy != null">
+            <if test="groupBy == 'userId'">GROUP BY userId</if>
+        </if>
+    </select>
+
+
+    <!--  全网当月平均  -->
+    <select id="findMonthAvg" resultType="com.courier.db.entity.Report">
+        SELECT
+            IFNULL(avg(sendNo), 0) sendNo,
+            IFNULL(avg(collectNo), 0) collectNo,
+            IFNULL(avg(failedNo), 0) failedNo,
+            #{code} as `type`,
+            #{countT} as countTime
+        from
+        (
+          SELECT
+            IFNULL(sum(sendNo), 0) sendNo,
+            IFNULL(sum(collectNo), 0) collectNo,
+            IFNULL(sum(failedNo), 0) failedNo
+            from report WHERE
+              type=1
+              <if test="beginT != null"> and countTime &gt;= #{beginT} </if>
+              <if test="endT != null"> and countTime &lt;= #{endT} </if>
+            GROUP BY userId
+        ) as a
+    </select>
+
+    <select id="findByUidTypeAndCreateTime" resultType="com.courier.db.entity.Report">
+        SELECT * FROM report WHERE  userId = #{userId} and `type` = #{type} and countTime &gt;= #{beginT} order by countTime asc
+    </select>
+
+    <!--  多条件查询  -->
+    <select id="findYtoData" parameterType="java.util.Map" resultType="com.courier.db.vModel.VYtoData">
+        SELECT
+        avgMonth.sendNo as monthMeanSendNo,avgMonth.collectNo as monthMeanCollectdNo,
+        userMonth.sendNo as monthSendNo,userMonth.collectNo as monthCollectNo,
+        userAll.sendNo as totalSendNo,userAll.collectNo as totalCollectNo
+        from
+        (SELECT * FROM report WHERE type = 4 and userId = #{userId} ORDER BY countTime DESC LIMIT 0, 1) as avgMonth,
+        (SELECT * FROM report WHERE type = 2 and userId = #{userId} ORDER BY countTime DESC LIMIT 0, 1) as userMonth,
+        (SELECT * FROM report WHERE type = 3 and userId = #{userId}) as userAll
+
+    </select>
+    <!--  多条件查询  -->
+    <select id="countByFilters" parameterType="java.util.Map" resultType="java.lang.Integer">
+        SELECT * FROM report WHERE 1=1
+        <if test="userId != null"> and userId = #{userId} </if>
+        <if test="beginT != null"> and countTime &gt;= #{beginT} </if>
+        <if test="endT != null"> and countTime &lt;= #{endT} </if>
+        <if test="types != null">and `type` in
+            <foreach collection="types" index="index" item="item" open="(" separator="," close=")">#{item}</foreach>
+        </if>
+    </select>
+    <!--  批量插入  -->
+    <insert id="batchInsert" parameterType="java.util.List">
+        <selectKey keyProperty="fetchTime" order="BEFORE" resultType="java.lang.String">SELECT CURRENT_TIMESTAMP() </selectKey>
+        insert into report ( userId, sendNo, collectNo, failedNo, countTime, `type`, createTime, updateTime) values
+        <foreach collection="list" item="item" index="index" separator=",">
+            ( #{item.userId}, #{item.sendNo}, #{item.collectNo}, #{item.failedNo}, #{item.countTime}, #{item.type}, #{fetchTime},#{fetchTime} )
+        </foreach>
+    </insert>
+
+    <!--  批量更新  -->
+    <delete id="batchDelByType"  parameterType="java.util.Map">
+        delete from report where `type` = #{code}
+    </delete>
+
+    <!--  批量删除  -->
+    <delete id="delDataForInsert">
+        delete from report where `type` IN (3, 5, 6)
+    </delete>
+
+    <select id="findThisMonth" resultType="com.courier.db.entity.Report">
+        select *
+        from report
+        where type = 1
+              and userid = #{userId}
+              and date_format(countTime,'%Y-%m')=date_format(#{time},'%Y-%m')
+              order by countTime desc
+    </select>
+    <select id="findThisDay" resultType="com.courier.db.entity.Report">
+        select *
+        from report
+        where type = 1
+        and userid = #{userId}
+        and date_format(countTime,'%Y-%m-%d')=#{date}
+        limit 1
+    </select>
+    <select id="findStatByMonths" resultType="com.courier.db.entity.Report">
+        SELECT id,type,userid, countTime,sendNo,collectNo,failedNo FROM report
+        where type in (2,5) and userId = #{userId}
+        <if test="labels != null">
+            and date_format(countTime,'%Y-%m') in
+            <foreach collection="labels" index="index" item="item" open="(" separator="," close=")">
+              #{item}
+            </foreach>
+        </if>
+        order by countTime desc
+    </select>
+
+    <select id="findByUserIds" resultType="com.courier.db.entity.Report">
+        select sum(sendNo) sendNo,sum(collectNo) collectNo,sum(failedNo) failedNo
+        from report where type = 1
+        <if test="beginDate != null and beginDate != ''">
+            AND countTime &gt;= concat(#{beginDate},' 00:00:00')
+        </if>
+        <if test="endDate != null and endDate != ''">
+            AND countTime &lt;= concat(#{endDate},' 23:59:59')
+        </if>
+        and userId in
+        <foreach collection="userIds" item="userId" open="(" separator="," close=")">
+            #{userId}
+        </foreach>
+    </select>
+
+    <select id="findDetail" resultType="com.courier.db.entity.Report">
+        select userId,sum(sendNo) sendNo,sum(collectNo) collectNo,sum(failedNo) failedNo
+        from report where type = 1
+        <if test="beginDate != null and beginDate != ''">
+          AND countTime &gt;= concat(#{beginDate},' 00:00:00')
+        </if>
+        <if test="endDate != null and endDate != ''">
+          AND countTime &lt;= concat(#{endDate},' 23:59:59')
+        </if>
+        and userId in
+        <foreach collection="userIds" item="userId" open="(" separator="," close=")">
+            #{userId}
+        </foreach>
+        GROUP BY userId
+        ORDER BY sum(sendNo) DESC,sum(collectNo) DESC,sum(failedNo) ASC
+    </select>
+
+    <select id="findFrequentUIds" resultType="java.lang.Long">
+        select userId
+        from report where type = 1
+            and sendNo &gt;= #{minSendNo}
+            AND countTime &gt;= #{beginT}
+            AND countTime &lt;= #{endT}
+            ORDER BY sendNo desc
+    </select>
+    <select id="findTotalByRegionRole" resultType="com.courier.db.vModel.VReportTotalNum">
+        SELECT SUM(sendNo) sendNoTotal,SUM(collectNo) collectNoTotal,SUM(failedNo) failedNoTotal
+        FROM report WHERE type=1
+        AND countTime &gt;= concat(#{beginDate},' 00:00:00')
+        AND countTime &lt;= concat(#{endDate},' 23:59:59')
+        AND userId in
+        <foreach collection="userIds" item="userId" open="(" separator="," close=")">
+            #{userId}
+        </foreach>
+    </select>
+    <select id="findReportGroupByUserId" resultType="com.courier.db.vModel.VReportTotalNum">
+        SELECT SUM(sendNo) sendNoTotal,SUM(collectNo) collectNoTotal,SUM(failedNo) failedNoTotal,userId
+        FROM report WHERE type=1
+        AND countTime &gt;= concat(#{beginDate},' 00:00:00')
+        AND countTime &lt;= concat(#{endDate},' 23:59:59')
+        AND userId in
+        <foreach collection="userIds" item="userId" open="(" separator="," close=")">
+            #{userId}
+        </foreach>
+        GROUP BY userId
+    </select>
+    <select id="findReportGroupByTime" resultType="com.courier.db.vModel.VReportTotalNum">
+        SELECT SUM(sendNo) sendNoTotal,SUM(collectNo) collectNoTotal,SUM(failedNo) failedNoTotal,date_format(countTime,'%Y-%m-%d') time
+        FROM report WHERE type=1
+        AND countTime &gt;= concat(#{beginDate},' 00:00:00')
+        AND countTime &lt;= concat(#{endDate},' 23:59:59')
+        AND userId in
+        <foreach collection="userIds" item="userId" open="(" separator="," close=")">
+            #{userId}
+        </foreach>
+        GROUP BY time
+    </select>
+    <select id="findReportGroupByUserIdDesc" resultType="com.courier.db.vModel.VReportTotalNum">
+        SELECT IFNULL(SUM(sendNo),0) sendNoTotal,IFNULL(SUM(collectNo),0) collectNoTotal,IFNULL(SUM(failedNo),0) failedNoTotal,re.id userId
+        FROM
+        (SELECT DISTINCT id FROM `user` WHERE phone is NOT null and orgCode =#{orgCode}) re
+        LEFT JOIN report o
+        on re.id = o.userId WHERE  o.type =1 AND o.countTime &gt;= concat(#{beginDate},' 00:00:00')  AND o.countTime &lt;= concat(#{endDate},' 23:59:59')
+        GROUP BY re.id  ORDER BY  sendNoTotal DESC
+        <if test="pageNo != null and pageSize != null">LIMIT #{pageNo} , #{pageSize}</if>
+    </select>
+    <select id="queryReportByUserId" resultType="com.courier.db.vModel.VReportTotalNum">
+      SELECT SUM(sendNo) sendNoTotal,SUM(collectNo) collectNoTotal,SUM(failedNo) failedNoTotal,userId
+        FROM report WHERE type= 1
+        AND countTime &gt;= concat(#{beginDate},' 00:00:00')
+        AND countTime &lt;= concat(#{endDate},' 23:59:59')
+        AND userId =#{userId}
+    </select>
+</mapper>

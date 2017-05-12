@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.courier.db.dao.PayUserInfoMapper">
+    <!--逻辑删除已有绑定数据-->
+    <update id="logicDelByUserId">
+        UPDATE payUserInfo set status = 0 WHERE userId = #{userId} and status = 1;
+    </update>
+
+    <!-- 根据 user 和 状态查找  -->
+    <select id="findByUIdAndStatus" resultType="com.courier.db.entity.PayUserInfo">
+        SELECT * FROM payUserInfo WHERE userId = #{userId}
+        <if test="status != null">
+            <if test="status == true"> AND `status` = 1 </if>
+            <if test="status == false"> AND `status` = 0 </if>
+        </if>
+        <if test="channelType != null">
+            AND channelType = #{channelType}
+        </if>
+    </select>
+</mapper>

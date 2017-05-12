@@ -1,0 +1,141 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:util="http://www.springframework.org/schema/util"
+       xmlns:context="http://www.springframework.org/schema/context"
+       xmlns:task="http://www.springframework.org/schema/task"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans
+           http://www.springframework.org/schema/beans/spring-beans.xsd
+           http://www.springframework.org/schema/context
+           http://www.springframework.org/schema/context/spring-context.xsd
+           http://www.springframework.org/schema/util
+           http://www.springframework.org/schema/util/spring-util-3.2.xsd
+           http://www.springframework.org/schema/task
+           http://www.springframework.org/schema/task/spring-task-3.2.xsd">
+
+
+    <description>dataCenter</description>
+
+    <!-- 引入配置文件 -->
+    <!-- 属性文件自下而上覆盖前一个文件-->
+    <bean id="propertyConfigurer" class="org.springframework.beans.factory.config.PropertyPlaceholderConfigurer" lazy-init="false">
+        <property name="ignoreUnresolvablePlaceholders" value="true"/>
+        <property name="ignoreResourceNotFound" value="true" />
+        <property name="systemPropertiesModeName" value="SYSTEM_PROPERTIES_MODE_OVERRIDE" />
+        <property name="locations">
+            <list>
+                <value>classpath*:database*.properties</value>
+                <value>classpath*:core*.properties</value>
+                <value>classpath*:activemq.properties</value>
+                <value>classpath*:interface.properties</value>
+            </list>
+        </property>
+        <property name="fileEncoding" value="utf-8" />
+    </bean>
+
+    <context:annotation-config/>
+    <task:annotation-driven/>
+    <context:component-scan base-package="com.courier.subDataCenter">
+        <context:exclude-filter type="annotation" expression="org.springframework.stereotype.Controller"/>
+    </context:component-scan>
+
+    <!-- NotifyServer主服务-->
+    <bean id="notifyServer" class="com.courier.commons.service.ServerEngine" init-method="init" destroy-method="stop">
+        <property name="serviceMap">
+            <map>
+                <entry key="properitesListenter" value-ref="properitesListenter" />
+            </map>
+        </property>
+    </bean>
+
+    <!-- SyncDelivery -->
+    <bean id="syncDeliveryReceiveMQClient" class="com.courier.subDataCenter.mq.SyncDeliveryReceiveMQClient" init-method="init" destroy-method="disconnect">
+        <property name="activeMQConnectFactory" ref="activeMQConnectFactory"/>
+        <property name="queueName" value="${activemq.syncdelivery.queuenameByReceive}" />
+        <property name="threadNum" value="${activemq.syncdelivery.receiveThreadPoolsCount}" />
+    </bean>
+
+    <!-- SyncSign -->
+    <bean id="syncSignReceiveMQClient" class="com.courier.subDataCenter.mq.SyncSignReceiveMQClient" init-method="init" destroy-method="disconnect">
+        <property name="activeMQConnectFactory" ref="activeMQConnectFactory"/>
+        <property name="queueName" value="${activemq.syncsign.queuenameByReceive}" />
+        <property name="threadNum" value="${activemq.syncsign.receiveThreadPoolsCount}" />
+    </bean>
+
+
+    <!-- push 消息-->
+    <bean id="pushMQClient" class="com.courier.core.mq.PushMQClient" init-method="init" destroy-method="disconnect">
+        <property name="activeMQConnectFactory" ref="activeMQConnectFactory"/>
+        <property name="queueName" value="${activemq.push.queuenameBySend}" />
+        <property name="threadNum" value="${activemq.push.sendThreadPoolsCount}"/>
+    </bean>
+    <!-- ActiveMQ 阿里短消息-->
+    <bean id="aliMessageMQClient" class="com.courier.core.mq.AliMessageMQClient" init-method="init" destroy-method="disconnect">
+        <property name="activeMQConnectFactory" ref="activeMQConnectFactory"/>
+        <property name="queueName" value="${activemq.alibabamessage.queuenameBySend}" />
+        <property name="threadNum" value="${activemq.alibabamessage.sendThreadPoolsCount}"/>
+    </bean>
+    <!-- ActiveMQ 阿里电话-->
+    <bean id="aliCallMQClient" class="com.courier.core.mq.AliCallMQClient" init-method="init" destroy-method="disconnect">
+        <property name="activeMQConnectFactory" ref="activeMQConnectFactory"/>
+        <property name="queueName" value="${activemq.alibabacall.queuenameBySend}" />
+        <property name="threadNum" value="${activemq.alibabacall.sendThreadPoolsCount}" />
+    </bean>
+    <!-- ActiveMQ 短信-->
+    <bean id="smsmqClient" class="com.courier.core.mq.SMSMQClient" init-method="init" destroy-method="disconnect">
+        <property name="activeMQConnectFactory" ref="activeMQConnectFactory"/>
+        <property name="queueName" value="${activemq.sms.queuenameBySend}" />
+        <property name="threadNum" value="${activemq.sms.sendThreadPoolsCount}" />
+    </bean>
+    <!-- AciveMQ 接单-->
+    <bean id="collectAcceptMQClient" class="com.courier.core.mq.CollectAcceptMQClient" init-method="init" destroy-method="disconnect">
+        <property name="activeMQConnectFactory" ref="activeMQConnectFactory"/>
+        <property name="queueName" value="${activemq.collectaccect.queuenameBySend}" />
+        <property name="threadNum" value="${activemq.collectaccect.sendThreadPoolsCount}" />
+    </bean>
+    <!-- AciveMQ 无人接单-->
+    <bean id="collectNoAcceptMQClient" class="com.courier.core.mq.CollectNoAcceptMQClient" init-method="init" destroy-method="disconnect">
+        <property name="activeMQConnectFactory" ref="activeMQConnectFactory"/>
+        <property name="queueName" value="${activemq.collectnoaccect.queuenameBySend}" />
+        <property name="threadNum" value="${activemq.collectnoaccect.sendThreadPoolsCount}" />
+    </bean>
+    <!--AciveMQ 有单取件-->
+    <bean id="collectPickUpMQClient" class="com.courier.core.mq.CollectPickUpMQClient" init-method="init" destroy-method="disconnect">
+        <property name="activeMQConnectFactory" ref="activeMQConnectFactory"/>
+        <property name="queueName" value="${activemq.collectpickup.queuenameBySend}" />
+        <property name="threadNum" value="${activemq.collectpickup.sendThreadPoolsCount}" />
+    </bean>
+    <!--AciveMQ 无单取件-->
+    <bean id="collectPickUpByNoMQClient" class="com.courier.core.mq.CollectPickUpByNoMQClient" init-method="init" destroy-method="disconnect">
+        <property name="activeMQConnectFactory" ref="activeMQConnectFactory"/>
+        <property name="queueName" value="${activemq.collectpickupbyno.queuenameBySend}" />
+        <property name="threadNum" value="${activemq.collectpickupbyno.sendThreadPoolsCount}" />
+    </bean>
+    <!-- AciveMQ 签收-->
+    <bean id="deliverySignMQClient" class="com.courier.core.mq.DeliverySignMQClient" init-method="init" destroy-method="disconnect">
+        <property name="activeMQConnectFactory" ref="activeMQConnectFactory"/>
+        <property name="queueName" value="${activemq.delivery.queuenameBySend}" />
+        <property name="threadNum" value="${activemq.delivery.sendThreadPoolsCount}" />
+    </bean>
+
+    <!-- ActiveMQ 基础配置-->
+    <bean id="activeMQConnectConfig" class="com.courier.commons.mq.ActiveMQConnectConfig" init-method="init">
+        <property name="bPersistent" value="${activemq.persistent}" />
+        <property name="brokerUrl" value="${activemq.brokenurl}"/>
+        <property name="username" value="${activemq.username}"/>
+        <property name="password" value="${activemq.password}"/>
+        <property name="perBatchNum" value="${activemq.perbatchnum}"/>
+    </bean>
+
+    <bean id="activeMQConnectFactory" class="com.courier.commons.mq.ActiveMQConnectFactory" init-method="init" destroy-method="disconnect">
+        <property name="activeMQConnectConfig" ref="activeMQConnectConfig" />
+    </bean>
+
+
+    <import resource="classpath*:applicationDBContext.xml" />
+    <import resource="classpath*:applicationCacheContext.xml" />
+    <import resource="classpath*:applicationCoreContext.xml" />
+    <import resource="classpath*:mq/consumer.xml" />
+    <import resource="classpath*:mq/producer.xml" />
+
+</beans>

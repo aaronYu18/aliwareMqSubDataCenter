@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans" xmlns:context="http://www.springframework.org/schema/context"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:schemaLocation="http://www.springframework.org/schema/context
+    http://www.springframework.org/schema/context/spring-context.xsd
+    http://www.springframework.org/schema/beans
+    http://www.springframework.org/schema/beans/spring-beans.xsd">
+
+
+    <bean id="aliwareMQConnectConfig" class="com.courier.commons.aliwareMq.base.AliwareMQConnectConfig">
+        <property name="accessKey" value="LTAI428dRA2UzLpV"/>
+        <property name="secretKey" value="JpvN8p1iX8avVaxMQ9TBQKB6LpKwqL"/>
+        <property name="onsAddr" value="http://onsaddr-internet.aliyun.com/rocketmq/nsaddr4client-internet"/>
+    </bean>
+
+
+    <!-- 无序MQ配置 -->
+    <bean id="testProducer" class="com.courier.commons.aliwareMq.producer.TestProducer" init-method="init" destroy-method="shutdown">
+        <property name="producerId" value="PID_aaronMqDemo"/>
+        <property name="config" ref="aliwareMQConnectConfig"/>
+    </bean>
+<!--
+    &lt;!&ndash; 有序MQ配置 &ndash;&gt;
+    <bean id="producerOrderOne" class="com.courier.commons.aliwareMq.producer.TestProducer" init-method="init" destroy-method="shutdown">
+        <property name="producerId" value="PID_aaronMqDemo"/>
+        <property name="config" ref="aliwareMQConnectConfig"/>
+    </bean>
+
+    &lt;!&ndash; 事务MQ配置 &ndash;&gt;
+    <bean id="producerTransactionOne" class="com.courier.commons.aliwareMq.producer.TestProducer" init-method="init" destroy-method="shutdown">
+        <property name="producerId" value="PID_aaronMqDemo"/>
+        <property name="config" ref="aliwareMQConnectConfig"/>
+        <property name="checker" ref="checker"/>
+    </bean>-->
+
+
+</beans>

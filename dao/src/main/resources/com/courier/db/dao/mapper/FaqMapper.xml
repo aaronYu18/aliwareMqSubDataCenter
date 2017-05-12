@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.courier.db.dao.FaqMapper">
+    <!--sql 查询目录-->
+    <select id="findCategory" resultType="com.courier.db.entity.FAQ">
+        SELECT * FROM faq WHERE status =1 and LENGTH(path) = 2 ORDER by path asc
+    </select>
+
+    <!--sql 查询内容目录-->
+    <select id="findByParent" resultType="com.courier.db.entity.FAQ">
+        SELECT * FROM faq WHERE status =1 and path like  CONCAT(#{path}, '%') ORDER by path asc
+    </select>
+</mapper>

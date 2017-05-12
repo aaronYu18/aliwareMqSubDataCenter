@@ -1,0 +1,260 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.courier.db.dao.OrderOperationMapper">
+    <sql id="signAndCollectCount">
+        select
+        userId,
+        sum(case operationType when 2 then 1 else 0 end) signNo,
+        sum(case operationType when 1 then 1 else 0 end) collectNo,
+        sum(case operationType when 3 then 1 else 0 end) signFailNo
+        FROM orderOperation
+    </sql>
+
+    <sql id="countManageFilter">
+        SELECT id from user WHERE
+        <choose>
+            <when test="type == 0">
+                orgCode in (
+                SELECT DISTINCT orgCode from branch WHERE provinceCode = (SELECT provinceCode FROM branch WHERE orgCode = #{orgCode})
+                )
+            </when>
+            <when test="type == 1">
+                orgCode in (
+                SELECT DISTINCT orgCode FROM branch WHERE branchCode = #{orgCode}
+                )
+            </when>
+            <when test="type == 2">
+                orgCode = #{orgCode}
+            </when>
+        </choose>
+        and phone is not null
+    </sql>
+    <!--  多条件查询  -->
+    <select id="findByFilters" resultType="com.courier.db.entity.OrderOperation">
+        SELECT * FROM orderOperation WHERE userId = #{userId}
+        <if test="dcTypes != null"> and dcType in <foreach collection="dcTypes" index="index" item="item" open="(" separator="," close=")"> #{item} </foreach> </if>
+        <if test="operations != null"> and operationType in <foreach collection="operations" index="index" item="item" open="(" separator="," close=")"> #{item} </foreach> </if>
+        <if test="mailNo != null and mailNo != ''"> and mailNo = #{mailNo}</if>
+        <if test="beginT != null"> and createTime &gt;= #{beginT}</if>
+        <if test="endT != null"> and createTime &lt;= #{endT}</if>
+        order by createTime desc
+        <if test="pageNo != null and pageSize != null"> LIMIT #{pageNo} , #{pageSize}</if>
+    </select>
+    <!--  多条件统计  -->
+    <select id="countByFilters" parameterType="java.util.Map" resultType="java.lang.Integer">
+        SELECT COUNT(*) FROM orderOperation WHERE userId = #{userId}
+        <if test="dcTypes != null"> and dcType in <foreach collection="dcTypes" index="index" item="item" open="(" separator="," close=")"> #{item} </foreach> </if>
+        <if test="operations != null"> and operationType in <foreach collection="operations" index="index" item="item" open="(" separator="," close=")"> #{item} </foreach> </if>
+        <if test="mailNo != null and mailNo != ''"> and mailNo = #{mailNo}</if>
+        <if test="beginT != null"> and createTime &gt;= #{beginT}</if>
+        <if test="endT != null"> and createTime &lt;= #{endT}</if>
+    </select>
+    <!--  多条件每日分组统计  -->
+    <select id="dayCountByFilters" parameterType="java.util.Map" resultType="com.courier.db.vModel.VOperationDayCount">
+        SELECT DATE_FORMAT(createTime,'%Y-%m-%d') day,COUNT(*) count FROM orderOperation WHERE userId = #{userId}
+        <if test="dcTypes != null"> and dcType in <foreach collection="dcTypes" index="index" item="item" open="(" separator="," close=")"> #{item} </foreach> </if>
+        <if test="operations != null"> and operationType in <foreach collection="operations" index="index" item="item" open="(" separator="," close=")"> #{item} </foreach> </if>
+        <if test="beginT != null"> and createTime &gt;= #{beginT}</if>
+        <if test="endT != null"> and createTime &lt;= #{endT}</if>
+        GROUP BY DATE_FORMAT(createTime,'%Y-%m-%d')
+        ORDER BY DATE_FORMAT(createTime,'%Y-%m-%d') DESC
+    </select>
+    <!--  统计今日已取 已签  -->
+    <select id="countTodaySignAndCollect" parameterType="java.util.Map" resultType="java.util.Map">
+          <include refid="signAndCollectCount"/>
+        WHERE
+          userId = #{userId}
+           and createTime &gt;= #{beginT}
+           and createTime &lt;= #{endT}
+    </select>
+    <!--  统计我的圆通数据 -->
+    <select id="countYtoData" parameterType="java.util.Map" resultType="com.courier.db.vModel.VYtoData">
+        SELECT
+        IFNULL(userAll.signNo, 0) as totalSendNo, IFNULL(userAll.collectNo, 0) as totalCollectNo,
+        IFNULL(monthAvg.signNo, 0) as monthMeanSendNo, IFNULL(monthAvg.collectNo, 0) as monthMeanCollectdNo,
+        IFNULL(userMonthAll.signNo, 0) as monthSendNo, IFNULL(userMonthAll.collectNo, 0) as monthCollectNo
+        FROM
+        -- 当月平均
+        ( SELECT avg(signNo) as signNo, avg(collectNo) as collectNo FROM (<include refid="signAndCollectCount"/> WHERE createTime &gt;= #{beginT} and createTime &lt;= #{endT} GROUP by userId) as t) as monthAvg,
+        -- 当月总派件总取件
+        ( SELECT avg(signNo) as signNo, avg(collectNo) as collectNo FROM (<include refid="signAndCollectCount"/> WHERE createTime &gt;= #{beginT} and createTime &lt;= #{endT} GROUP by userId) as t WHERE userId = #{userId}) as userMonthAll,
+        -- 总派件总取件
+        ( SELECT avg(signNo) as signNo, avg(collectNo) as collectNo FROM (<include refid="signAndCollectCount"/> GROUP by userId) as t WHERE userId = #{userId}) as userAll
+
+    </select>
+    <!--  统计我的收派件情况 -->
+    <select id="findReportsByTime" parameterType="java.util.Map" resultType="com.courier.db.entity.Report">
+        SELECT
+          userId, IFNULL(signNo, 0) as sendNo, IFNULL(collectNo, 0) as collectNo, IFNULL(signFailNo, 0) as failedNo, #{type} as `type`, #{countT} as countTime
+      FROM (<include refid="signAndCollectCount"/>
+        WHERE 1=1
+        <if test="beginT != null"> and createTime &gt;= #{beginT} </if>
+        <if test="endT != null"> and createTime &lt;= #{endT} </if>
+        GROUP by userId) as t
+    </select>
+    <!--  统计平均收派件情况 -->
+    <select id="findAvgReportByTime" parameterType="java.util.Map" resultType="com.courier.db.entity.Report">
+        SELECT avg(sendNo) as sendNo, avg(collectNo) as collectNo, avg(failedNo) as failedNo, #{type} as `type`, #{endT} as countTime
+        FROM (SELECT
+          userId, IFNULL(signNo, 0) as sendNo, IFNULL(collectNo, 0) as collectNo, IFNULL(signFailNo, 0) as failedNo
+      FROM (<include refid="signAndCollectCount"/>
+        WHERE 1=1
+        <if test="beginT != null"> and createTime &gt;= #{beginT} </if>
+        <if test="endT != null"> and createTime &lt;= #{endT} </if>
+        GROUP by userId) as t) as t1
+    </select>
+
+    <!--  统计总收派件情况 -->
+    <select id="countAllByTime" parameterType="java.util.Map" resultType="com.courier.db.entity.Report">
+        select
+            IFNULL(sum(case operationType when 2 then 1 else 0 end), 0) sendNo,
+            IFNULL(sum(case operationType when 1 then 1 else 0 end), 0) collectNo,
+            IFNULL(sum(case operationType when 3 then 1 else 0 end), 0) failedNo,
+            #{type} as `type`, #{endT} as countTime
+        FROM orderOperation
+        WHERE 1=1
+        <if test="beginT != null"> and createTime &gt;= #{beginT} </if>
+        <if test="endT != null"> and createTime &lt;= #{endT} </if>
+    </select>
+
+
+    <!--批量插入 批量签收专用-->
+    <insert id="insertBatch" parameterType="List">
+        INSERT INTO orderOperation (
+        orderId,
+        dcType,
+        userId,
+        operationType,
+        mailNo,
+        receiverName,
+        receiverPhone,
+        receiverProvince,
+        receiverCity,
+        receiverArea,
+        receiverAddress,
+        receiverLng,
+        receiverLat,
+        failedDescription,
+        createTime
+        )
+        VALUES
+        <foreach item="item" collection="list" index="index" separator=",">
+            (#{item.orderId}, #{item.dcType}, #{item.userId},  #{item.operationType},  #{item.mailNo},
+            #{item.receiverName},  #{item.receiverPhone},  #{item.receiverProvince},  #{item.receiverCity},  #{item.receiverArea},  #{item.receiverAddress},#{item.receiverLng},#{item.receiverLat},  #{item.failedDescription}, now())
+        </foreach>
+    </insert>
+
+    <insert id="backup">
+        INSERT INTO orderOperationBackup(id,orderId,dcType,userId,operationType,mailNo,
+        receiverName,receiverPhone,receiverProvince,receiverCity,receiverArea,receiverAddress,
+        receiverLng,receiverLat,failedDescription,createTime)
+        SELECT id,orderId,dcType,userId,operationType,mailNo,
+        receiverName,receiverPhone,receiverProvince,receiverCity,receiverArea,receiverAddress,
+        receiverLng,receiverLat,failedDescription,createTime FROM orderoperationHistory
+        WHERE (createTime &lt;= #{sign_fail_date} AND operationType = 3) OR (createTime &lt;= #{other_date} AND operationType != 3)
+    </insert>
+
+    <delete id="deleteHistory">
+        DELETE FROM orderoperationHistory WHERE (createTime &lt;= #{sign_fail_date} AND operationType = 3) OR (createTime &lt;= #{other_date} AND operationType != 3)
+    </delete>
+
+    <insert id="backupHistory">
+        INSERT INTO orderoperationHistory(id,orderId,dcType,userId,operationType,mailNo,
+        receiverName,receiverPhone,receiverProvince,receiverCity,receiverArea,receiverAddress,
+        receiverLng,receiverLat,failedDescription,createTime)
+        SELECT id,orderId,dcType,userId,operationType,mailNo,
+        receiverName,receiverPhone,receiverProvince,receiverCity,receiverArea,receiverAddress,
+        receiverLng,receiverLat,failedDescription,createTime FROM orderOperation
+        WHERE (createTime &lt;= #{sign_fail_date} AND operationType = 3) OR (createTime &lt;= #{other_date} AND operationType != 3)
+    </insert>
+
+    <delete id="deleteOperation">
+        DELETE FROM orderOperation WHERE (createTime &lt;= #{sign_fail_date} AND operationType = 3) OR (createTime &lt;= #{other_date} AND operationType != 3)
+    </delete>
+
+    <select id="getVOperationReports" resultType="com.courier.db.vModel.VOperationReport">
+        select date_format(createTime,'%Y-%m-%d') 'date',
+        IFNULL(sum(case operationType when 2 then 1 else 0 end), 0) 'sendNo',
+        IFNULL(sum(case operationType when 1 then 1 else 0 end), 0) 'collectNo',
+        IFNULL(sum(case operationType when 3 then 1 else 0 end), 0) 'problemNo'
+        FROM orderOperation WHERE 1=1
+        <if test="beginT != null"> and createTime &gt;= #{beginT} </if>
+        <if test="endT != null"> and createTime &lt;= #{endT} </if>
+        GROUP BY date_format(createTime,'%Y%m%d');
+    </select>
+
+
+
+    <select id="countForManage" resultType="com.courier.db.vModel.VOperationReport">
+        SELECT
+            IFNULL(signNo, 0) 'sendNo',
+            IFNULL(collectNo, 0) 'collectNo',
+            IFNULL(signFailNo, 0) 'problemNo'
+        FROM (
+            <include refid="signAndCollectCount"/>
+            WHERE 1=1
+            <if test="uIds != null and uIds.size() > 0">and userId in
+                <foreach collection="uIds" index="index" item="item" open="(" separator="," close=")">#{item}</foreach>
+            </if>
+            and createTime &gt;= #{beginT}
+            and createTime &lt;= #{endT}
+        ) a
+    </select>
+
+    <select id="buildForManageList" resultType="com.courier.commons.vModel.VManagerSubCurrentData">
+        select
+            us.id userId,
+            us.username username,
+            us.jobNo 'key',
+            us.orgCode 'userOrgCode',
+            1 isJobNo,
+            3 'role',
+            jg.signNo signNo,
+            jg.collectNo collectNo,
+            jg.problemNo problemNo
+        from
+            (SELECT * FROM `user`  where phone is NOT null and orgCode = #{orgCode}) us
+            LEFT JOIN
+            (
+            select
+                u.id userId,u.username username,u.jobNo 'key',
+                u.orgCode 'userOrgCode',1 isJobNo,3 'role',
+                sum(case o.operationType when 2 then 1 else 0 end) signNo,
+                sum(case o.operationType when 1 then 1 else 0 end) collectNo,
+                sum(case o.operationType when 3 then 1 else 0 end) problemNo
+            from
+                user u ,  orderoperation o
+            where
+                u.id=o.userid
+                <if test="beginT != null and beginT != ''">and o.createTime &gt;= #{beginT} </if>
+                <if test="endT != null and endT != ''"> and o.createTime &lt;= #{endT} </if>
+                and u.phone is not null and u.orgCode = #{orgCode}
+            GROUP BY u.id  ) jg
+        on jg.userid=us.id
+        ORDER BY signNo DESC
+        <if test="pageNo != null and pageSize != null">LIMIT #{pageNo} , #{pageSize}</if>
+    </select>
+
+    <select id="countCollectingNoForManage" parameterType="java.util.Map" resultType="java.lang.Integer">
+        SELECT COUNT(*) FROM collectOrder
+        WHERE 1=1
+        <if test="uIds != null and uIds.size() > 0">and userId in
+            <foreach collection="uIds" index="index" item="item" open="(" separator="," close=")">#{item}</foreach>
+        </if>
+        and orderStatus=1
+    </select>
+
+    <select id="countSendingNoForManage" parameterType="java.util.Map" resultType="java.lang.Integer">
+        SELECT COUNT(*) FROM deliveryOrder WHERE 1=1
+        <if test="uIds != null and uIds.size() > 0">and userId in
+            <foreach collection="uIds" index="index" item="item" open="(" separator="," close=")">#{item}</foreach>
+        </if>
+        and orderStatus=0 and flag=1
+    </select>
+
+    <select id="countUsersForManage" parameterType="java.util.Map" resultType="java.lang.Long">
+        <include refid="countManageFilter"/>
+    </select>
+</mapper>

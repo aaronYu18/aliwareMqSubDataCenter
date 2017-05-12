@@ -1,0 +1,126 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.courier.db.dao.BranchMapper">
+
+    <!--通过orgcode 查询 圆通组织结构信息 orgCode 可能为 分部Code 或分公司Code-->
+    <select id="findByOrgCode" resultType="com.courier.db.entity.Branch">
+       SELECT * from branch WHERE orgCode = #{orgCode}
+    </select>
+
+    <select id="getBranchByUId" resultType="com.courier.db.entity.Branch">
+       SELECT * from branch WHERE orgCode = (SELECT orgCode from user WHERE id = #{userId})
+    </select>
+
+    <select id="countVBranch" resultType="java.lang.Integer">
+       SELECT count(*) FROM branch WHERE 1=1
+        <if test="provinceCode != null and provinceCode != ''">
+            AND provinceCode = #{provinceCode}
+        </if>
+        <if test="orgCode != null and orgCode != ''">
+            AND (orgCode LIKE concat('%',#{orgCode},'%') or branchCode LIKE concat('%',#{orgCode},'%'))
+        </if>
+    </select>
+
+    <select id="findVBranchPage" resultType="com.courier.db.vModel.VBranch">
+       SELECT b.id,b.provinceCode,b.province provinceName,b.orgCode,b.branchCode,
+       (SELECT COUNT(*) FROM `user` where orgcode = b.orgCode AND phone IS NOT NULL) courierCount
+       FROM branch b
+       WHERE 1=1
+        <if test="provinceCode != null and provinceCode != ''">
+            AND b.provinceCode = #{provinceCode}
+        </if>
+        <if test="orgCode != null and orgCode != ''">
+            AND (b.orgCode LIKE concat('%',#{orgCode},'%') or b.branchCode LIKE concat('%',#{orgCode},'%'))
+        </if>
+        ORDER BY b.provinceCode,b.branchCode
+        <if test="index != null and limit != null">
+            limit #{index},#{limit}
+        </if>
+    </select>
+
+    <select id="sumVBranch" resultType="com.courier.db.vModel.VBranch">
+        SELECT sum(r.sendNo) sendNo,sum(r.collectNo) collectNo,sum(r.failedNo) failNo
+        FROM branch b JOIN `user` u ON b.orgCode = u.orgCode JOIN report r ON u.id = r.userId
+        WHERE 1=1
+        AND r.`type` = 1
+        <if test="provinceCode != null and provinceCode != ''">
+            AND b.provinceCode = #{provinceCode}
+        </if>
+        <if test="orgCode != null and orgCode != ''">
+            AND (b.orgCode LIKE concat('%',#{orgCode},'%') or b.branchCode LIKE concat('%',#{orgCode},'%'))
+        </if>
+        <if test="beginDate != null and beginDate != ''">
+            AND r.countTime &gt;= concat(#{beginDate},' 00:00:00')
+        </if>
+        <if test="endDate != null and endDate != ''">
+            AND r.countTime &lt;= concat(#{endDate},' 23:59:59')
+        </if>
+    </select>
+
+    <select id="findByPCodeAndType" resultType="java.lang.String">
+        SELECT DISTINCT orgCode FROM branch WHERE 1=1
+        <if test="provinceCode != null and provinceCode != ''"> AND provinceCode = #{provinceCode} </if>
+        <if test="type != null"> AND type = #{type} </if>
+        ORDER BY  orgCode  asc
+        <if test="pageNo != null and pageSize != null">LIMIT #{pageNo} , #{pageSize}</if>
+    </select>
+
+    <select id="countByPCodeAndType" resultType="java.lang.Integer">
+        SELECT count(DISTINCT orgCode) FROM branch WHERE 1=1
+        <if test="provinceCode != null and provinceCode != ''"> AND provinceCode = #{provinceCode} </if>
+        <if test="type != null"> AND type = #{type} </if>
+    </select>
+
+    <select id="findByBranchCodes" resultType="java.lang.String">
+        SELECT DISTINCT orgCode FROM branch WHERE branchCode IN
+        <foreach collection="branchCodes" index="index" item="item" open="(" separator="," close=")">#{item}</foreach>
+        <if test="type != null"> AND type = #{type} </if>
+        ORDER BY  orgCode asc
+        <if test="pageNo != null and pageSize != null">LIMIT #{pageNo} , #{pageSize}</if>
+    </select>
+    <select id="findByBCodeType" resultType="java.lang.String">
+        SELECT DISTINCT orgCode FROM branch WHERE 1=1
+        <if test="type != null"> AND type = #{type} </if>
+        AND branchCode = #{branchCode}
+    </select>
+
+    <select id="countByBranchCode" resultType="java.lang.Integer">
+        SELECT count(DISTINCT orgCode) FROM branch WHERE branchCode = #{branchCode}
+         <if test="type != null">AND type = #{type} </if>
+    </select>
+
+    <select id="findTerminalsByBranchCode" resultType="java.lang.String">
+        SELECT DISTINCT orgCode FROM branch WHERE branchCode = #{branchCode} and type = 0 ORDER BY orgCode  asc
+        <if test="pageNo != null and pageSize != null">LIMIT #{pageNo} , #{pageSize}</if>
+    </select>
+
+    <select id="countTerminalsByBranchCode" resultType="java.lang.Integer">
+        SELECT count(DISTINCT orgCode) FROM branch WHERE branchCode = #{branchCode} ORDER BY orgCode  asc
+    </select>
+
+    <select id="findNotExistsBranchCodes" resultType="java.lang.String">
+        SELECT DISTINCT branchCode from branch where branchCode not in (SELECT DISTINCT orgCode FROM branch);
+    </select>
+    <!-- 通过orgcode 获取所在的省网的分公司-->
+    <select id="fetchCompanyByOrgCode" resultType="java.lang.String">
+        SELECT DISTINCT orgCode from branch
+        WHERE provinceCode = (SELECT provinceCode FROM branch WHERE orgCode = #{orgCode})
+        <if test="type != null"> AND type = #{type} </if>
+        ORDER BY  orgCode  asc
+        <if test="pageNo != null and pageSize != null">LIMIT #{pageNo} , #{pageSize}</if>
+    </select>
+    <select id="countCompanyByOrgCode" resultType="java.lang.Integer">
+        SELECT count(DISTINCT orgCode) from branch
+        WHERE provinceCode = (SELECT provinceCode FROM branch WHERE orgCode = #{orgCode})
+        <if test="type != null"> AND type = #{type} </if>
+    </select>
+    <!-- 通过orgcode 获取所在的省网的分分部和分公司 -->
+    <select id="fetchTerminalByOrgCode" resultType="java.lang.String">
+        SELECT DISTINCT orgCode FROM branch
+        WHERE branchCode IN
+        (SELECT DISTINCT orgCode
+        from branch WHERE provinceCode = (SELECT provinceCode FROM branch WHERE orgCode = #{orgCode}) )
+    </select>
+</mapper>

@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.courier.db.dao.SmsMessageMapper">
+    <update id="batchUpdateSMSMessageStatus" parameterType="java.util.List">
+        <foreach collection="list" item="item" index="index" open="" close="" separator=";">
+            update smsMessage
+            <set>
+                status = #{item.status}
+            </set>
+            , updatetime = now()
+            where id = #{item.id}
+        </foreach>
+    </update>
+
+    <!--  批量插入  -->
+    <insert id="batchInsertSMSMessage" parameterType="java.util.List">
+        insert into smsMessage (jobNo, orgCode, status, `type`, aliResponseCode, createTime, updateTime, phone) values
+        <foreach collection="list" item="ii" index="index" separator=",">
+            ( #{ii.jobNo}, #{ii.orgCode}, #{ii.status}, #{ii.type}, #{ii.aliResponseCode}, #{ii.createTime}, #{ii.updateTime}, #{ii.phone})
+        </foreach>
+    </insert>
+</mapper>

@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.courier.db.dao.PayOperationInfoMapper">
+    <sql id="signAndCollectCount">
+        select
+        userId,
+        sum(case operType when 2 then amount else 0 end) collectionAmount,
+        sum(case operType when 5 then amount else 0 end) refundAmount,
+        sum(case operType WHEN 8 then amount else 0 end) cancelAmount,
+        sum(case operType WHEN 11 then amount else 0 end) sysCancelAmount
+        FROM payOperationInfo
+    </sql>
+
+    <!--  统计我的收派件情况 -->
+    <select id="findReportsByTime" parameterType="java.util.Map" resultType="com.courier.db.entity.PayReport">
+        SELECT
+            userId,
+            IFNULL(collectionAmount, 0) as collectionAmount,
+            IFNULL(refundAmount, 0) as refundAmount,
+            IFNULL(cancelAmount, 0) as cancelAmount,
+            IFNULL(sysCancelAmount, 0) as sysCancelAmount,
+            #{type} as `type`,
+            #{countT} as countTime
+        FROM (<include refid="signAndCollectCount"/>
+        WHERE 1=1
+        <if test="beginT != null"> and createTime &gt;= #{beginT} </if>
+        <if test="endT != null"> and createTime &lt;= #{endT} </if>
+        GROUP by userId) as t
+    </select>
+
+    <select id="getTodayProfile" resultType="java.lang.Double">
+        SELECT IFNULL(sum(amount), 0) FROM payOperationInfo
+        where userId = #{userId} and operType = 2 and date_format(createTime,'%Y-%m-%d') = date_format(now(),'%Y-%m-%d');
+    </select>
+
+</mapper>

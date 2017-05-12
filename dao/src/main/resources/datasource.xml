@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:context="http://www.springframework.org/schema/context"
+       xsi:schemaLocation="
+        http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-3.2.xsd
+        http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-3.2.xsd"
+        >
+
+    <description>数据库环境配置</description>
+
+    <context:property-placeholder ignore-resource-not-found="true" location="classpath*:database.properties"/>
+
+    <!-- dataSource 配置 -->
+    <!--<bean id="dataSource" class="com.mchange.v2.c3p0.ComboPooledDataSource" destroy-method="close">
+        <property name="driverClass" value="${jdbc.driver}"/>
+        <property name="jdbcUrl" value="${jdbc.url}"/>
+        <property name="user" value="${jdbc.user}"/>
+        <property name="password" value="${jdbc.password}"/>
+        &lt;!&ndash; 初始化时创建的连接数，应在minPoolSize与maxPoolSize之间取值&ndash;&gt;
+        <property name="initialPoolSize" value="${jdbc.initialpoolsize}"/>
+        &lt;!&ndash; 连接池中保留的最小连接数 &ndash;&gt;
+        <property name="minPoolSize" value="${jdbc.minpoolsize}"/>
+        &lt;!&ndash; 连接池中保留的最大连接数 &ndash;&gt;
+        <property name="maxPoolSize" value="${jdbc.maxpoolsize}"/>
+        &lt;!&ndash; 当连接池中的连接用完时，一次性创建新连接的数目 &ndash;&gt;
+        <property name="acquireIncrement" value="${jdbc.acquireincrement}"/>
+        &lt;!&ndash; 定义在从数据库获取新连接失败后重复尝试获取的次数，默认：30 &ndash;&gt;
+        <property name="acquireRetryAttempts" value="${jdbc.acquireRetryAttempts}"/>
+        &lt;!&ndash; 两次连接中间隔时间，单位毫秒 &ndash;&gt;
+        <property name="acquireRetryDelay" value="${jdbc.acquireRetryDelay}"/>
+        &lt;!&ndash; 当连接池用完时客户端调用getConnection()后等待获取新连接的时间，超时后将抛出SQLException
+            如设为0则无限期等待。单位毫秒，默认为0，这里是10秒 &ndash;&gt;
+        <property name="checkoutTimeout" value="${jdbc.checkoutTimeout}"/>
+        &lt;!&ndash; 每60秒检查所有连接池中的空闲连接 &ndash;&gt;
+        <property name="idleConnectionTestPeriod" value="${jdbc.idleconnectiontestperiod}"/>
+        &lt;!&ndash; 最大空闲时间，120秒内未使用的则连接被丢弃 &ndash;&gt;
+        <property name="maxIdleTime" value="${jdbc.maxidletime}"/>
+        &lt;!&ndash; 定义所有连接测试都执行的测试语句 &ndash;&gt;
+        <property name="preferredTestQuery" value="select 1 from dual"/>
+        &lt;!&ndash; 如果设为true那么在取得连接的同时将校验连接的有效性 &ndash;&gt;
+        <property name="testConnectionOnCheckin" value="true"/>
+        &lt;!&ndash; 预缓存&ndash;&gt;
+        <property name="maxStatements" value="${jdbc.maxstatements}"/>
+    </bean>-->
+
+    <bean id="dataSource" class="com.alibaba.druid.pool.DruidDataSource" init-method="init" destroy-method="close">
+        <property name="url" value="${jdbc.url}" />
+        <property name="username" value="${jdbc.user}" />
+        <property name="password" value="${jdbc.password}" />
+        <property name="filters" value="stat" />
+        <property name="maxActive" value="${jdbc.maxpoolsize}" />
+        <property name="initialSize" value="${jdbc.initialpoolsize}" />
+        <property name="maxWait" value="60000" />
+        <property name="minIdle" value="${jdbc.minpoolsize}" />
+        <property name="timeBetweenEvictionRunsMillis" value="3000" />
+        <property name="minEvictableIdleTimeMillis" value="300000" />
+        <property name="validationQuery" value="SELECT 'x'" />
+        <property name="testWhileIdle" value="true" />
+        <property name="testOnBorrow" value="false" />
+        <property name="testOnReturn" value="false" />
+        <property name="poolPreparedStatements" value="false" />
+        <property name="maxPoolPreparedStatementPerConnectionSize" value="20" />
+    </bean>
+</beans>

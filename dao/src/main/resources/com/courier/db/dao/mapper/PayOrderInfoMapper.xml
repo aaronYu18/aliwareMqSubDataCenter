@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.courier.db.dao.PayOrderInfoMapper">
+    <!--sql 根据订单号查询 -->
+    <select id="findBySerialNo" resultType="com.courier.db.entity.PayOrderInfo">
+        SELECT * FROM payOrderInfo WHERE serialNo = #{serialNo} limit 0,1;
+    </select>
+
+    <!--  多条件查询  -->
+    <select id="findByFilters" resultType="com.courier.db.entity.PayOrderInfo">
+        SELECT * FROM payOrderInfo WHERE 1=1
+        <if test="userId != null"> AND userId = #{userId} </if>
+        <if test="channelType != null"> AND channelType = #{channelType} </if>
+        <if test="status != null"> AND status = #{status} </if>
+        <if test="payType != null"> AND payType = #{payType} </if>
+        <if test="costType != null"> AND costType = #{costType} </if>
+        <if test="beginT != null"> and createTime &gt;= #{beginT} </if>
+        <if test="endT != null"> and createTime &lt;= #{endT} </if>
+        ORDER BY paymentTime DESC
+        <if test="pageNo != null and pageSize != null">LIMIT #{pageNo} , #{pageSize}</if>
+    </select>
+    <!--  多条件统计  -->
+    <select id="countByFilters" parameterType="java.util.Map" resultType="java.lang.Integer">
+        SELECT COUNT(*) FROM payOrderInfo WHERE 1=1
+        <if test="userId != null"> AND userId = #{userId} </if>
+        <if test="channelType != null"> AND channelType = #{channelType} </if>
+        <if test="status != null"> AND status = #{status} </if>
+        <if test="payType != null"> AND payType = #{payType} </if>
+        <if test="costType != null"> AND costType = #{costType} </if>
+        <if test="beginT != null"> and createTime &gt;= #{beginT} </if>
+        <if test="endT != null"> and createTime &lt;= #{endT} </if>
+    </select>
+
+</mapper>

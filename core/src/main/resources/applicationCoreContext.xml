@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:context="http://www.springframework.org/schema/context"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:dubbo="http://code.alibabatech.com/schema/dubbo"
+       xsi:schemaLocation="http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context.xsd
+    http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+    http://code.alibabatech.com/schema/dubbo http://code.alibabatech.com/schema/dubbo/dubbo.xsd">
+
+    <description>CoreBusiness</description>
+
+    <context:annotation-config/>
+    <!-- 自动扫描将带有注解的类 纳入spring容器管理 -->
+    <context:component-scan base-package="com.courier.core"/>
+
+    <!--thread config-->
+    <bean id="threadPoolTaskExecutor" class="org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor">
+        <property name="corePoolSize" value="${threadPool.corePoolSize}"/>
+        <property name="maxPoolSize" value="${threadPool.maxPoolSize}"/>
+        <property name="queueCapacity" value="${threadPool.queueCapacity}"/>
+        <property name="keepAliveSeconds" value="${threadPool.keepAliveSeconds}"/>
+        <property name="rejectedExecutionHandler">
+            <bean class="java.util.concurrent.ThreadPoolExecutor$CallerRunsPolicy"/>
+        </property>
+    </bean>
+    <!-- 初始化本地缓存-->
+    <bean id="initCacheData" class="com.courier.core.cache.InitCacheData" init-method="init">
+        <property name="regionService" ref="regionService"></property>
+        <property name="apiConfigService" ref="apiConfigService"></property>
+        <property name="recoverAcceptNoUserService" ref="recoverAcceptNoUserService"></property>
+        <property name="sourceClientIdRelationService" ref="sourceClientIdRelationService"></property>
+        <property name="provinceAuthPatternService" ref="provinceAuthPatternService"></property>
+        <property name="userService" ref="userService"></property>
+    </bean>
+
+
+    <!-- 消费方应用名，用于计算依赖关系，不是匹配条件，不要与提供方一样 -->
+    <dubbo:application name="consumerPay" />
+
+    <!-- 使用multicast广播注册中心暴露发现服务地址 -->
+    <dubbo:registry protocol="zookeeper" group="pay" address="${dubbo.zookeeper.address}" />
+
+    <!-- 生成远程服务代理，可以和本地bean一样使用demoService -->
+    <dubbo:reference interface="com.courier.commons.api.pay.alipay.AlipayApi" id="alipayApi"/>
+
+
+</beans>

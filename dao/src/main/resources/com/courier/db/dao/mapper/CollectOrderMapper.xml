@@ -1,0 +1,331 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.courier.db.dao.CollectOrderMapper">
+    <!--  多条件查询  -->
+    <select id="findByFilters" resultType="com.courier.db.entity.CollectOrder">
+        SELECT * FROM collectOrder WHERE  1=1
+        <if test="userId != null"> AND userId =#{userId} </if>
+        <if test="status != null"> and orderStatus in <foreach collection="status" index="index" item="item" open="(" separator="," close=")"> #{item} </foreach> </if>
+        <if test="types != null"> and orderType in <foreach collection="types" index="index" item="item" open="(" separator="," close=")"> #{item} </foreach> </if>
+        <choose>
+            <when test="timeField== 'receiveTime'">
+                <if test="beginT != null"> and receiveTime &gt;= #{beginT} </if>
+                <if test="endT != null"> and receiveTime &lt;= #{endT} </if>
+            </when>
+            <when test="timeField== 'collectTime'">
+                <if test="beginT != null"> and collectTime &gt;= #{beginT} </if>
+                <if test="endT != null"> and collectTime &lt;= #{endT} </if>
+            </when>
+            <when test="timeField== 'updateTime'">
+                <if test="beginT != null"> and updateTime &gt;= #{beginT} </if>
+                <if test="endT != null"> and updateTime &lt;= #{endT} </if>
+            </when>
+            <otherwise>
+                <if test="beginT != null"> and createTime &gt;= #{beginT} </if>
+                <if test="endT != null"> and createTime &lt;= #{endT} </if>
+            </otherwise>
+        </choose>
+        <if test="expressNo != null"> and mailNo = #{expressNo} </if>
+        <if test="orderId != null"> and id = #{orderId} </if>
+        <if test="sortName != null">
+            order by ${sortName}
+            <if test="sortType == 0">asc</if>
+            <if test="sortType == 1">desc</if>
+        </if>
+        <if test="sortName == null"> order by createTime desc </if>
+        <if test="pageNo != null and pageSize != null"> LIMIT #{pageNo} , #{pageSize} </if>
+    </select>
+    <!--  多条件统计  -->
+    <select id="countByFilters" parameterType="java.util.Map" resultType="java.lang.Integer">
+        SELECT COUNT(*) FROM collectOrder WHERE 1=1
+        <if test="userId != null"> AND userId =#{userId} </if>
+        <if test="status != null"> and orderStatus in <foreach collection="status" index="index" item="item" open="(" separator="," close=")"> #{item} </foreach> </if>
+        <if test="types != null"> and orderType in <foreach collection="types" index="index" item="item" open="(" separator="," close=")"> #{item} </foreach> </if>
+        <choose>
+            <when test="timeField== 'receiveTime'">
+                <if test="beginT != null"> and receiveTime &gt;= #{beginT} </if>
+                <if test="endT != null"> and receiveTime &lt;= #{endT} </if>
+            </when>
+            <when test="timeField== 'collectTime'">
+                <if test="beginT != null"> and collectTime &gt;= #{beginT} </if>
+                <if test="endT != null"> and collectTime &lt;= #{endT} </if>
+            </when>
+            <when test="timeField== 'updateTime'">
+                <if test="beginT != null"> and updateTime &gt;= #{beginT} </if>
+                <if test="endT != null"> and updateTime &lt;= #{endT} </if>
+            </when>
+            <otherwise>
+                <if test="beginT != null"> and createTime &gt;= #{beginT} </if>
+                <if test="endT != null"> and createTime &lt;= #{endT} </if>
+            </otherwise>
+        </choose>
+        <if test="expressNo != null"> and mailNo = #{expressNo} </if>
+        <if test="orderId != null"> and id = #{orderId} </if>
+    </select>
+    <select id="findBySourceKey" resultType="com.courier.db.entity.CollectOrder">
+        SELECT * from collectOrder  where source= #{source} AND sourceKey = #{sourceKey}
+    </select>
+
+    <update id="updateBatch" parameterType="List">
+        <foreach collection="list" item="nodeVo" separator=";">
+            UPDATE  collectOrder
+            <set>
+                orderStatus = #{nodeVo.orderStatus},
+                updateTime = now()
+            </set>
+            <where>id = #{nodeVo.id}</where>
+        </foreach>
+    </update>
+
+    <!-- 删除无效数据  -->
+    <delete id="delInvalidData" parameterType="map">
+        DELETE FROM collectorder WHERE (orderStatus=0 and createTime &lt;= date_add(NOW(), interval -#{minutes} DAY_MINUTE)) or orderStatus = 4
+    </delete>
+
+    
+    <!--  findForSync -->
+    <select id="findForSync" resultType="com.courier.db.entity.CollectOrder">
+        SELECT * from collectOrder  where (
+        (orderType = 0 or orderType = 1) and orderStatus = 1 and  createTime &lt; date_format(now(),'%Y-%m-%d')  )
+        OR (updateTime &gt; date_format(now(),'%Y-%m-%d')  AND orderStatus in (5,6,7) and  createTime &lt; date_format(now(),'%Y-%m-%d') ) ORDER BY  id
+         <if test="pageNo != null and pageSize != null">LIMIT #{pageNo} , #{pageSize}</if>
+    </select>
+
+    <select id="findForSyncTotalNum"   resultType="java.lang.Integer">
+        SELECT count(*)  from collectOrder  where (
+        (orderType = 0 or orderType = 1) and orderStatus = 1 and  createTime &lt; date_format(now(),'%Y-%m-%d')  )
+        OR (updateTime  &gt; date_format(now(),'%Y-%m-%d')  AND orderStatus in (5,6,7) and  createTime &lt; date_format(now(),'%Y-%m-%d') )
+    </select>
+
+    <insert id="history" parameterType="java.util.Date">
+        INSERT INTO collectOrderHistory
+          (id,userId,serialNo,source,sourceKey,mailNo,mailType,senderName,senderPhone,senderTelPhone,senderProvince,senderCity,senderArea,senderAddress,goodsName,weight,ageing,remark,
+          bespeakTime,freightMoney,collectionMoney,senderLat,senderLng,receiverName,receiverPhone,receiverProvince,receiverCity,receiverArea,receiverAddress,orderType,
+          orderStatus,receiveTime,collectTime,createTime,updateTime,customerID,shortAddress,coupon,couponType)
+        SELECT
+          id,userId,serialNo,source,sourceKey,mailNo,mailType,senderName,senderPhone,senderTelPhone,senderProvince,senderCity,senderArea,senderAddress,goodsName,weight,ageing,remark,
+          bespeakTime,freightMoney,collectionMoney,senderLat,senderLng,receiverName,receiverPhone,receiverProvince,receiverCity,receiverArea,receiverAddress,orderType,
+          orderStatus,receiveTime,collectTime,createTime,updateTime,customerID,shortAddress,coupon,couponType
+        FROM collectOrder WHERE createTime &lt;= #{date} and orderStatus != 0 and orderStatus != 1
+    </insert>
+
+    <delete id="deleteHistory" parameterType="java.util.Date">
+        DELETE FROM collectOrder WHERE createTime &lt;= #{date} and orderStatus != 0 and orderStatus != 1
+    </delete>
+
+    <insert id="backup" parameterType="java.util.Date">
+        INSERT INTO collectOrderBackup
+          (id,userId,serialNo,source,sourceKey,mailNo,mailType,senderName,senderPhone,senderTelPhone,senderProvince,senderCity,senderArea,senderAddress,goodsName,weight,ageing,remark,
+          bespeakTime,freightMoney,collectionMoney,senderLat,senderLng,receiverName,receiverPhone,receiverProvince,receiverCity,receiverArea,receiverAddress,orderType,
+          orderStatus,receiveTime,collectTime,createTime,updateTime,customerID,shortAddress,coupon,couponType)
+        SELECT
+          id,userId,serialNo,source,sourceKey,mailNo,mailType,senderName,senderPhone,senderTelPhone,senderProvince,senderCity,senderArea,senderAddress,goodsName,weight,ageing,remark,
+          bespeakTime,freightMoney,collectionMoney,senderLat,senderLng,receiverName,receiverPhone,receiverProvince,receiverCity,receiverArea,receiverAddress,orderType,
+          orderStatus,receiveTime,collectTime,createTime,updateTime,customerID,shortAddress,coupon,couponType
+        FROM collectOrderHistory WHERE createTime &lt;= #{date}
+    </insert>
+
+    <delete id="deleteBackup" parameterType="java.util.Date">
+        DELETE FROM collectOrderHistory WHERE createTime &lt;= #{date}
+    </delete>
+
+    <select id="findCollect" resultType="com.courier.db.entity.CollectOrder">
+        SELECT * FROM collectOrder WHERE userId = #{userId} AND mailNo = #{mailNo} limit 1;
+    </select>
+
+    <select id="fuzzyCollect" resultType="com.courier.db.entity.CollectOrder">
+        SELECT * FROM collectOrder WHERE userId = #{userId}  AND orderStatus in (1, 2) AND mailNo like '%${mailNo}';
+    </select>
+
+    <select id="listGrabProvince" resultType="com.courier.db.vModel.VCollectData">
+        SELECT a.dt `date`, IF(r.`name` is null, '无', r.`name`) provinceName, r.code, a.totalNo totalNo
+        , a.receiveNo receiveNo, a.collectNo collectNo, (a.receiveNo - a.collectNo) waitCollectNo
+        from (
+        select
+        DATE_FORMAT(updateTime,'%Y-%m-%d') dt,
+        senderProvince,
+        count(*) totalNo,
+        sum(case when receiveTime is not null then 1 else 0 end) receiveNo,
+        sum(case when collectTime is not null then 1 else 0 end) collectNo,
+        updateTime
+        FROM collectorder
+        WHERE orderType = 0
+        <if test="beginTime != null and beginTime != ''">and updateTime &gt;= concat(#{beginTime}, ' 00:00:00')</if>
+        <if test="endTime != null and endTime != ''">and updateTime &lt;= concat(#{endTime}, ' 23:59:59')</if>
+        GROUP BY dt, senderProvince ) a
+        , region r
+        where a.senderProvince = r.`code`
+        ORDER BY dt, r.code
+        limit #{index}, #{limit};
+    </select>
+
+    <select id="countGrabProvince" resultType="java.lang.Integer">
+        SELECT COUNT(*)
+        from (
+        select
+        DATE_FORMAT(updateTime,'%Y-%m-%d') dt,
+        senderProvince,
+        count(*) totalNo,
+        sum(case when receiveTime is not null then 1 else 0 end) receiveNo,
+        sum(case when collectTime is not null then 1 else 0 end) collectNo,
+        updateTime
+        FROM collectorder
+        WHERE orderType = 0
+        <if test="beginTime != null and beginTime != ''">and updateTime &gt;= concat(#{beginTime}, ' 00:00:00')</if>
+        <if test="endTime != null and endTime != ''">and updateTime &lt;= concat(#{endTime}, ' 23:59:59')</if>
+        GROUP BY dt, senderProvince ) a
+        , region r
+        where a.senderProvince = r.`code`
+        ORDER BY dt, r.code;
+    </select>
+
+    <select id="listGrabOrg" resultType="com.courier.db.vModel.VCollectData">
+        select aa.*, aa.dt `date`, aa.receiveNo receiveNo, aa.collectNo collectNo, (aa.receiveNo - aa.collectNo) waitCollectNo from
+        (
+        select
+        b.province provinceName,
+        case when b.type =1 then b.branchName else b.terminalName end bname,
+        a.*
+        from (
+        select
+        u.orgCode,
+        DATE_FORMAT(c.updateTime,'%Y-%m-%d') dt,
+        sum(case when receiveTime is not null then 1 else 0 end) receiveNo,
+        sum(case when collectTime is not null then 1 else 0 end) collectNo
+        from collectorder c, user u
+        WHERE c.userId = u.id
+        and orderType = 0
+        <if test="beginTime != null and beginTime != ''">and c.updateTime &gt;= concat(#{beginTime}, ' 00:00:00')</if>
+        <if test="endTime != null and endTime != ''">and c.updateTime &lt;= concat(#{endTime}, ' 23:59:59')</if>
+        GROUP BY u.orgCode, dt
+        ) a, branch b
+        where a.orgCode = b.orgCode order by b.provinceCode, orgCode, dt
+        ) aa
+        limit #{index}, #{limit};
+    </select>
+
+    <select id="countGrabOrg" resultType="java.lang.Integer">
+        select count(*) from
+        (
+        select
+        b.province,
+        case when b.type =1 then b.branchName else b.terminalName end bname,
+        a.*
+        from (
+        select
+        u.orgCode,
+        DATE_FORMAT(c.updateTime,'%Y-%m-%d') dt,
+        sum(case when receiveTime is not null then 1 else 0 end) receiveNo,
+        sum(case when collectTime is not null then 1 else 0 end) collectNo
+        from collectorder c, user u
+        WHERE c.userId = u.id
+        and orderType = 0
+        <if test="beginTime != null and beginTime != ''">and c.updateTime &gt;= concat(#{beginTime}, ' 00:00:00')</if>
+        <if test="endTime != null and endTime != ''">and c.updateTime &lt;= concat(#{endTime}, ' 23:59:59')</if>
+        GROUP BY u.orgCode, dt
+        ) a, branch b
+        where a.orgCode = b.orgCode order by b.provinceCode, orgCode, dt
+        ) aa
+    </select>
+
+    <select id="listGrabGather" resultType="com.courier.db.vModel.VCollectData">
+        select aa.dt `date`, aa.orgCode, aa.orgName, aa.branchCode, aa.branchName, aa.province provinceName, aa.receiveNo, aa.collectNo, (aa.receiveNo - aa.collectNo) waitCollectNo from
+        (
+        select
+        a.* ,
+        b.province,
+        case when b.type = 0 then b.terminalName else b.branchName end orgName,
+        b.branchCode,
+        (SELECT branchName FROM branch where orgCode = (select branchCode from branch where orgCode = a.orgCode)) branchName
+        from (
+        select
+        DATE_FORMAT(c.updateTime,'%Y-%m-%d') dt,
+        u.orgCode,
+        sum(case when receiveTime is not null then 1 else 0 end) receiveNo,
+        sum(case when collectTime is not null then 1 else 0 end) collectNo
+        from collectorder c, user u
+        WHERE c.userId = u.id
+        and orderType = 0
+        <if test="beginTime != null and beginTime != ''">and c.updateTime &gt;= concat(#{beginTime}, ' 00:00:00')</if>
+        <if test="endTime != null and endTime != ''">and c.updateTime &lt;= concat(#{endTime}, ' 23:59:59')</if>
+        GROUP BY u.orgCode, dt
+        ) a, branch b
+        where a.orgCode = b.orgCode order by dt, b.provinceCode, orgCode
+        ) aa
+        limit #{index}, #{limit};
+    </select>
+
+    <select id="countGrabGather" resultType="java.lang.Integer">
+        select COUNT(*) from
+        (
+        select
+        a.* ,
+        b.province,
+        case when b.type = 0 then b.terminalName else b.branchName end orgName,
+        b.branchCode,
+        (SELECT branchName FROM branch where orgCode = (select branchCode from branch where orgCode = a.orgCode)) branchName
+        from (
+        select
+        DATE_FORMAT(c.updateTime,'%Y-%m-%d') dt,
+        u.orgCode,
+        sum(case when receiveTime is not null then 1 else 0 end) receiveNo,
+        sum(case when collectTime is not null then 1 else 0 end) collectNo
+        from collectorder c, user u
+        WHERE c.userId = u.id
+        and orderType = 0
+        <if test="beginTime != null and beginTime != ''">and c.updateTime &gt;= concat(#{beginTime}, ' 00:00:00')</if>
+        <if test="endTime != null and endTime != ''">and c.updateTime &lt;= concat(#{endTime}, ' 23:59:59')</if>
+        GROUP BY u.orgCode, dt
+        ) a, branch b
+        where a.orgCode = b.orgCode order by dt, b.provinceCode, orgCode
+        ) aa
+    </select>
+
+    <select id="listWaitCollect" resultType="com.courier.db.vModel.VCollectData">
+        select
+        DATE_FORMAT(c.updateTime,'%Y-%m-%d') `date`, u.orgCode,
+        case when b.type = 0 then b.terminalName else b.branchName end orgName, c.sourceKey, u.jobNo, u.username `name`
+        from collectorder c, user u, branch b
+        where receiveTime is not null and collectTime is null
+        <if test="beginTime != null and beginTime != ''">and c.updateTime &gt;= concat(#{beginTime}, ' 00:00:00')</if>
+        <if test="endTime != null and endTime != ''">and c.updateTime &lt;= concat(#{endTime}, ' 23:59:59')</if>
+        and c.userId = u.id and u.orgCode = b.orgCode
+        order by DATE_FORMAT(c.updateTime,'%Y-%m-%d'), u.orgCode, sourceKey
+        limit #{index}, #{limit};
+    </select>
+
+    <select id="countWaitCollect" resultType="java.lang.Integer">
+        select COUNT(*)
+        from collectorder c, user u, branch b
+        where receiveTime is not null and collectTime is null
+        <if test="beginTime != null and beginTime != ''">and c.updateTime &gt;= concat(#{beginTime}, ' 00:00:00')</if>
+        <if test="endTime != null and endTime != ''">and c.updateTime &lt;= concat(#{endTime}, ' 23:59:59')</if>
+        and c.userId = u.id and u.orgCode = b.orgCode
+        order by DATE_FORMAT(c.updateTime,'%Y-%m-%d'), u.orgCode, sourceKey;
+    </select>
+
+    <select id="listWaitGrab" resultType="com.courier.db.vModel.VCollectData">
+        select
+        DATE_FORMAT(c.updateTime,'%Y-%m-%d') `date`,
+        c.sourceKey, r1.`name` provinceName, r2.`name` cityName, r3.`name` areaName, c.senderAddress address
+        from collectorder c, region r1, region r2, region r3
+        where orderType = 0 and orderStatus = 3 and r1.`code` = c.senderProvince
+        and r2.`code` = c.senderCity and r3.`code` = c.senderArea
+        <if test="beginTime != null and beginTime != ''">and c.updateTime &gt;= concat(#{beginTime}, ' 00:00:00')</if>
+        <if test="endTime != null and endTime != ''">and c.updateTime &lt;= concat(#{endTime}, ' 23:59:59')</if>
+        order by DATE_FORMAT(c.updateTime,'%Y-%m-%d'), sourceKey
+        limit #{index}, #{limit};
+    </select>
+
+    <select id="countWaitGrab" resultType="java.lang.Integer">
+        select COUNT(*)
+        from collectorder c, region r1, region r2, region r3
+        where orderType = 0 and orderStatus = 3 and r1.`code` = c.senderProvince
+        and r2.`code` = c.senderCity and r3.`code` = c.senderArea
+        <if test="beginTime != null and beginTime != ''">and c.updateTime &gt;= concat(#{beginTime}, ' 00:00:00')</if>
+        <if test="endTime != null and endTime != ''">and c.updateTime &lt;= concat(#{endTime}, ' 23:59:59')</if>
+        order by DATE_FORMAT(c.updateTime,'%Y-%m-%d'), sourceKey;
+    </select>
+</mapper>

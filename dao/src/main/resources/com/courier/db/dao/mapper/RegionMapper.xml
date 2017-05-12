@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.courier.db.dao.RegionMapper">
+    <select id="findByParentCode" resultType="com.courier.db.entity.Region">
+        SELECT * from region WHERE code like #{codeKey}
+        <if test="regionEnum == 1 or regionEnum == 2">
+            and code != #{parentCode}
+        </if>
+        ORDER by code asc
+    </select>
+
+
+    <select id="getByName" parameterType="string" resultType="com.courier.db.entity.Region">
+        SELECT * FROM region WHERE 1=1
+        <if test="name != null">AND name LIKE #{name}</if>
+        limit 0,1
+    </select>
+    <select id="getByCode" parameterType="string" resultType="com.courier.db.entity.Region">
+        SELECT * FROM region WHERE 1=1
+        <if test="code != null">AND code LIKE #{code}</if>
+        limit 0,1
+    </select>
+
+
+    <!--  多条件统计  StaleRegion -->
+    <select id="countStaleRegion" parameterType="java.util.Map" resultType="java.lang.Integer">
+        SELECT count(*) FROM staleRegion
+    </select>
+
+    <!-- 查找过期无效的region-->
+    <select id="findStaleRegionByPage" resultType="com.courier.db.entity.Region">
+        SELECT * from staleRegion
+        <if test="pageNo != null and pageSize != null">LIMIT #{pageNo} , #{pageSize}</if>
+    </select>
+</mapper>

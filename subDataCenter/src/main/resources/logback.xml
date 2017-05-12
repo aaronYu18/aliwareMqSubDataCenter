@@ -1,0 +1,213 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration scan="true">
+
+    <property name="rootLog" value="../logs" />
+    <property name="project_name" value="subDataCenter" />
+    <property name="log_level" value="INFO" />
+
+    <!-- 打印到控制台 -->
+    <appender name="Console" class="ch.qos.logback.core.ConsoleAppender">
+        <filter class="ch.qos.logback.classic.filter.LevelFilter">
+            <level>${log_level}</level>
+        </filter>
+        <encoder>
+            <pattern>
+                %date %-5level [%-40thread] [%-30file:%-7line] %msg%n
+            </pattern>
+        </encoder>
+    </appender>
+
+    <!-- 不同級別的文件記錄在不同的日誌文件中 -->
+    <appender name="FILEINFO" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <Encoding>UTF-8</Encoding>
+        <file>${rootLog}/${project_name}/${project_name}-info.log</file>
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <FileNamePattern>${rootLog}/${project_name}/${project_name}-info.%d{yyyy-MM-dd}.log.zip</FileNamePattern>
+            <MaxHistory>3</MaxHistory>
+        </rollingPolicy>
+        <encoder>
+            <pattern>%date [%thread] %-5level %logger{50} - %msg%n</pattern>
+        </encoder>
+        <filter class="ch.qos.logback.classic.filter.LevelFilter">
+            <level>INFO</level>
+            <onMatch>ACCEPT</onMatch>
+            <onMismatch>DENY</onMismatch>
+        </filter>
+    </appender>
+
+    <appender name="FILEERROR" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <Encoding>UTF-8</Encoding>
+        <file>${rootLog}/${project_name}/${project_name}-error.log</file>
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <FileNamePattern>${rootLog}/${project_name}/${project_name}-error.%d{yyyy-MM-dd}.log.zip</FileNamePattern>
+            <MaxHistory>3</MaxHistory>
+        </rollingPolicy>
+        <encoder>
+            <pattern>%date [%thread] %-5level %logger{50} - %msg%n</pattern>
+        </encoder>
+        <filter class="ch.qos.logback.classic.filter.LevelFilter">
+            <level>ERROR</level>
+            <onMatch>ACCEPT</onMatch>
+            <onMismatch>DENY</onMismatch>
+        </filter>
+    </appender>
+
+    <appender name="FILEDEBUG" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <Encoding>UTF-8</Encoding>
+        <file>${rootLog}/${project_name}/${project_name}-debug.log</file>
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <FileNamePattern>${rootLog}/${project_name}/${project_name}-debug.%d{yyyy-MM-dd}.log.zip</FileNamePattern>
+            <MaxHistory>3</MaxHistory>
+        </rollingPolicy>
+        <encoder>
+            <pattern>%date [%thread] %-5level %logger{50} - %msg%n</pattern>
+        </encoder>
+        <filter class="ch.qos.logback.classic.filter.LevelFilter">
+            <level>DEBUG</level>
+            <onMatch>ACCEPT</onMatch>
+            <onMismatch>DENY</onMismatch>
+        </filter>
+    </appender>
+
+    <!-- 数据同步 -->
+    <appender name="SYNC_FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <Encoding>UTF-8</Encoding>
+        <file>${rootLog}/${project_name}/sync.log</file>
+        <filter class="ch.qos.logback.classic.filter.LevelFilter">
+            <level>INFO</level>
+        </filter>
+
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <fileNamePattern>
+                ${rootLog}/${project_name}/sync.%d{yyyy-MM-dd}.log.zip
+            </fileNamePattern>
+            <maxHistory>3</maxHistory>
+        </rollingPolicy>
+
+        <encoder> <pattern>{"time": "%date", %msg}%n</pattern>
+        </encoder>
+    </appender>
+    <!-- 金刚推送派件数据 -->
+    <appender name="PUSH_DELIVERY_FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <Encoding>UTF-8</Encoding>
+        <file>${rootLog}/${project_name}/push_delivery.log</file>
+        <filter class="ch.qos.logback.classic.filter.LevelFilter">
+            <level>INFO</level>
+        </filter>
+
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <fileNamePattern>
+                ${rootLog}/${project_name}/push_delivery.%d{yyyy-MM-dd}.log.zip
+            </fileNamePattern>
+            <maxHistory>3</maxHistory>
+        </rollingPolicy>
+
+        <encoder> <pattern>{"time": "%date", %msg}%n</pattern>
+        </encoder>
+    </appender>
+    <!-- 金刚推送签收数据 -->
+    <appender name="SIGN_DELIVERY_FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <Encoding>UTF-8</Encoding>
+        <file>${rootLog}/${project_name}/sign_delivery.log</file>
+        <filter class="ch.qos.logback.classic.filter.LevelFilter">
+            <level>INFO</level>
+        </filter>
+
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <fileNamePattern>
+                ${rootLog}/${project_name}/sign_delivery.%d{yyyy-MM-dd}.log.zip
+            </fileNamePattern>
+            <maxHistory>3</maxHistory>
+        </rollingPolicy>
+
+        <encoder> <pattern>{"time": "%date", %msg}%n</pattern>
+        </encoder>
+    </appender>
+    <!-- 签收订单记录 -->
+    <appender name="sign_orders_file" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <Encoding>UTF-8</Encoding>
+        <file>${rootLog}/${project_name}/signOrders.log</file>
+        <filter class="ch.qos.logback.classic.filter.LevelFilter">
+            <level>INFO</level>
+        </filter>
+
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <fileNamePattern>
+                ${rootLog}/${project_name}/signOrders.%d{yyyy-MM-dd}.log.zip
+            </fileNamePattern>
+            <maxHistory>3</maxHistory>
+        </rollingPolicy>
+
+        <encoder> <pattern>{"time": "%date", %msg}%n</pattern>
+        </encoder>
+    </appender>
+    <!-- 派件订单记录 -->
+    <appender name="delivery_orders_file" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <Encoding>UTF-8</Encoding>
+        <file>${rootLog}/${project_name}/deliveryOrders.log</file>
+        <filter class="ch.qos.logback.classic.filter.LevelFilter">
+            <level>INFO</level>
+        </filter>
+
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <fileNamePattern>
+                ${rootLog}/${project_name}/deliveryOrders.%d{yyyy-MM-dd}.log.zip
+            </fileNamePattern>
+            <maxHistory>3</maxHistory>
+        </rollingPolicy>
+
+        <encoder> <pattern>{"time": "%date", %msg}%n</pattern>
+        </encoder>
+    </appender>
+    <!-- 金刚接口及 百度的日志 -->
+    <appender name="JINGANG_INTERFACE-FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <Encoding>UTF-8</Encoding>
+        <file>${rootLog}/${project_name}/jgInterface.log</file>
+        <filter class="ch.qos.logback.classic.filter.LevelFilter">
+            <level>INFO</level>
+        </filter>
+
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <fileNamePattern>
+                ${rootLog}/${project_name}/jgInterface.%d{yyyy-MM-dd}.log.zip
+            </fileNamePattern>
+            <maxHistory>3</maxHistory>
+        </rollingPolicy>
+
+        <encoder>
+            <pattern>
+                {"time": "%date", %msg}%n
+            </pattern>
+        </encoder>
+    </appender>
+    <logger name="org.springframework" level="ERROR"/>
+    <logger name="ch.qos.logback" level="ERROR"/>
+    <logger name="com.courier.db" level="${log_level}"/>
+    <logger name="com.courier.commons" level="${log_level}" />
+    <logger name="com.courier.core" level="${log_level}" />
+
+
+    <logger name="SYNC_LOG" level="${log_level}" additivity="false">
+        <appender-ref ref="SYNC_FILE" />
+    </logger>
+    <logger name="PUSH_DELIVERY_LOG" level="${log_level}" additivity="false">
+        <appender-ref ref="PUSH_DELIVERY_FILE" />
+    </logger>
+    <logger name="SIGN_DELIVERY_LOG" level="${log_level}" additivity="false">
+        <appender-ref ref="SIGN_DELIVERY_FILE" />
+    </logger>
+    <logger name="JINGANG_INTERFACE_LOG" level="${log_level}" additivity="false">
+        <appender-ref ref="JINGANG_INTERFACE-FILE"/>
+    </logger>
+    <logger name="sign_orders_log" level="${log_level}" additivity="false">
+        <appender-ref ref="sign_orders_file"/>
+    </logger>
+    <logger name="delivery_orders_log" level="${log_level}" additivity="false">
+        <appender-ref ref="delivery_orders_file"/>
+    </logger>
+    <root level="${log_level}">
+        <appender-ref ref="Console"/>
+        <appender-ref ref="FILEINFO"/>
+        <appender-ref ref="FILEERROR"/>
+    </root>
+</configuration>

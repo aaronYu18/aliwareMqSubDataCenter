@@ -1,0 +1,331 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.courier.db.dao.OrgReportMapper">
+
+    <!--  批量删除  -->
+    <delete id="deleteDynaData">
+        delete from orgReport where `type` IN (4, 5, 6, 10, 11, 12)
+    </delete>
+
+    <insert id="insertTerminalData" useGeneratedKeys="true" keyProperty="id">
+        <selectKey keyProperty="fetchTime" order="BEFORE" resultType="java.lang.String">SELECT CURRENT_TIMESTAMP() </selectKey>
+        
+        INSERT INTo orgReport (orgCode, branchCode, provinceCode, sendNo, failedNo, collectNo, countTime, `type`, createTime, updateTime)
+        SELECT
+            re.orgCode orgCode,
+            b.branchCode branchCode,
+            b.provinceCode provinceCode,
+            re.sendNo sendNo,
+            re.failedNo failedNo,
+            re.collectNo collectNo,
+            #{countT} countTime,
+            #{type} `type`,
+            #{fetchTime} createTime,
+            #{fetchTime} updateTime
+        from (
+                SELECT
+                    u.orgCode,
+                    sum(r.sendNo) sendNo,
+                    sum(r.collectNo) collectNo,
+                    sum(r.failedNo) failedNo
+                from
+                    (SELECT
+                            userId,
+                            IFNULL(sum(sendNo), 0) sendNo,
+                            IFNULL(sum(collectNo), 0) collectNo,
+                            IFNULL(sum(failedNo), 0) failedNo
+                    from report
+                    WHERE
+                        type=1
+                        and countTime = #{countT}
+                    GROUP BY userId) r, `user` u
+                WHERE u.id=r.userId GROUP BY u.orgCode
+            ) re, branch b
+        WHERE
+            b.orgCode=re.orgCode
+    </insert>
+
+
+    <insert id="insertBranchData" useGeneratedKeys="true" keyProperty="id">
+        <selectKey keyProperty="fetchTime" order="BEFORE" resultType="java.lang.String">SELECT CURRENT_TIMESTAMP() </selectKey>
+
+        INSERT INTo orgReport (orgCode, branchCode, provinceCode, sendNo, failedNo, collectNo, countTime, `type`, createTime, updateTime)
+        SELECT
+            null orgCode,
+            branchCode branchCode,
+            provinceCode provinceCode,
+            IFNULL(sum(sendNo), 0) sendNo,
+            IFNULL(sum(failedNo), 0) failedNo,
+            IFNULL(sum(collectNo), 0) collectNo,
+            #{countT} countTime,
+            #{type} `type`,
+            #{fetchTime} createTime,
+            #{fetchTime} updateTime
+        FROM orgReport
+        WHERE
+            type=#{nextLevelType}
+            and countTime = #{countT}
+        GROUP BY branchCode
+    </insert>
+
+    <insert id="insertProvinceData" useGeneratedKeys="true" keyProperty="id">
+        <selectKey keyProperty="fetchTime" order="BEFORE" resultType="java.lang.String">SELECT CURRENT_TIMESTAMP() </selectKey>
+
+        INSERT INTo orgReport (orgCode, branchCode, provinceCode, sendNo, failedNo, collectNo, countTime, `type`, createTime, updateTime)
+        SELECT
+            null orgCode,
+            null branchCode,
+            provinceCode provinceCode,
+            IFNULL(sum(sendNo), 0) sendNo,
+            IFNULL(sum(failedNo), 0) failedNo,
+            IFNULL(sum(collectNo), 0) collectNo,
+            #{countT} countTime,
+            #{type} `type`,
+            #{fetchTime} createTime,
+            #{fetchTime} updateTime
+        FROM orgReport
+        WHERE
+            type=#{nextLevelType}
+            and countTime = #{countT}
+        GROUP BY provinceCode
+    </insert>
+
+
+
+    <insert id="insertAvgData" useGeneratedKeys="true" keyProperty="id">
+        <selectKey keyProperty="fetchTime" order="BEFORE" resultType="java.lang.String">SELECT CURRENT_TIMESTAMP() </selectKey>
+
+        INSERT INTo orgReport (orgCode, branchCode, provinceCode, sendNo, failedNo, collectNo, countTime, `type`, createTime, updateTime)
+        SELECT
+        null orgCode,
+        null branchCode,
+        null provinceCode,
+        IFNULL(avg(sendNo), 0) sendNo,
+        IFNULL(avg(failedNo), 0) failedNo,
+        IFNULL(avg(collectNo), 0) collectNo,
+        #{countT} countTime,
+        #{type} `type`,
+        #{fetchTime} createTime,
+        #{fetchTime} updateTime
+        FROM orgReport
+        WHERE
+        type=#{matchType}
+        and countTime BETWEEN #{beginMT} and #{endMT}
+    </insert>
+
+    <insert id="insertMonthTotalData" useGeneratedKeys="true" keyProperty="id">
+        <selectKey keyProperty="fetchTime" order="BEFORE" resultType="java.lang.String">SELECT CURRENT_TIMESTAMP() </selectKey>
+
+        INSERT INTo orgReport (orgCode, branchCode, provinceCode, sendNo, failedNo, collectNo, countTime, `type`, createTime, updateTime)
+        SELECT
+            orgCode orgCode,
+            branchCode branchCode,
+            provinceCode provinceCode,
+            IFNULL(sum(sendNo), 0) sendNo,
+            IFNULL(sum(failedNo), 0) failedNo,
+            IFNULL(sum(collectNo), 0) collectNo,
+            #{countT} countTime,
+            #{type} `type`,
+            #{fetchTime} createTime,
+            #{fetchTime} updateTime
+        FROM orgReport
+        WHERE
+        type=#{matchType}
+        and countTime BETWEEN #{beginMT} and #{endMT}
+        <choose>
+            <when test="matchType == 1"> GROUP BY orgCode</when>
+            <when test="matchType == 2"> GROUP BY branchCode</when>
+            <when test="matchType == 3"> GROUP BY provinceCode</when>
+        </choose>
+    </insert>
+
+    <select id="findOrgReportGroupByTime" resultType="com.courier.db.vModel.VReportTotalNum">
+        SELECT SUM(sendNo) sendNoTotal,SUM(collectNo) collectNoTotal,SUM(failedNo) failedNoTotal,date_format(countTime,'%Y-%m-%d') time
+        FROM orgreport WHERE type=#{type}
+        AND countTime &gt;= concat(#{beginDate},' 00:00:00')
+        AND countTime &lt;= concat(#{endDate},' 23:59:59')
+        <if test="provinceCode != null and provinceCode != ''">
+         AND provinceCode = #{provinceCode}
+        </if>
+        <if test="branchCode != null and branchCode != ''">
+        AND branchCode = #{branchCode}
+        </if>
+        <if test="orgCode != null and orgCode != ''">
+        AND orgCode = #{orgCode}
+        </if>
+        GROUP BY time
+    </select>
+    <select id="countOrgReportGroupByTime" resultType="com.courier.db.vModel.VReportTotalNum">
+        SELECT SUM(sendNo) sendNoTotal,SUM(collectNo) collectNoTotal,SUM(failedNo) failedNoTotal
+        FROM orgreport WHERE type=#{type}
+        AND countTime &gt;= concat(#{beginDate},' 00:00:00')
+        AND countTime &lt;= concat(#{endDate},' 23:59:59')
+        <if test="provinceCode != null and provinceCode != ''">
+            AND provinceCode = #{provinceCode}
+        </if>
+        <if test="branchCode != null and branchCode != ''">
+            AND branchCode = #{branchCode}
+        </if>
+        <if test="orgCode != null and orgCode != ''">
+            AND orgCode = #{orgCode}
+        </if>
+    </select>
+    <select id="findTotalByRegionRole" resultType="com.courier.db.vModel.VReportTotalNum">
+        SELECT SUM(sendNo) sendNoTotal,SUM(collectNo) collectNoTotal,SUM(failedNo) failedNoTotal
+        <if test="branchCodes != null ">,branchCode</if>
+        <if test="orgCodes != null">, orgCode</if>
+        FROM orgreport WHERE type=#{type}
+        AND countTime &gt;= concat(#{beginDate},' 00:00:00')
+        AND countTime &lt;= concat(#{endDate},' 23:59:59')
+        <if test="branchCodes != null">
+            AND branchCode IN
+            <foreach collection="branchCodes" index="index" item="item" open="(" separator="," close=")">#{item}</foreach>
+            GROUP BY branchCode
+        </if>
+        <if test="orgCodes != null">
+            AND orgCode  IN
+            <foreach collection="orgCodes" index="index" item="item" open="(" separator="," close=")">#{item}</foreach>
+            GROUP BY orgCode
+        </if>
+    </select>
+    <select id="countNumByRegionRole" resultType="java.lang.Integer">
+        SELECT count(*)
+        FROM orgreport WHERE type=#{type}
+        AND countTime &gt;= concat(#{beginDate},' 00:00:00')
+        AND countTime &lt;= concat(#{endDate},' 23:59:59')
+        <if test="provinceCode != null and provinceCode != ''">
+            AND provinceCode = #{provinceCode} ORDER BY branchCode asc
+        </if>
+        <if test="branchCode != null and branchCode != ''">
+            AND branchCode = #{branchCode} ORDER BY orgCode asc
+        </if>
+        <if test="orgCode != null and orgCode != ''">
+            AND orgCode = #{orgCode} ORDER BY orgCode asc
+        </if>
+    </select>
+    <!--分公司直属快递员的统计-->
+    <select id="findByOrgAndBranchCode" resultType="com.courier.db.vModel.VReportTotalNum">
+        SELECT SUM(sendNo) sendNoTotal,SUM(collectNo) collectNoTotal,SUM(failedNo) failedNoTotal,orgCode
+        FROM orgreport WHERE type=1
+        AND countTime &gt;= concat(#{beginDate},' 00:00:00')
+        AND countTime &lt;= concat(#{endDate},' 23:59:59')
+        <if test="branchCode != null and branchCode != ''">
+            AND orgCode = #{branchCode}
+        </if>
+    </select>
+
+
+    <select id="findByCodeAndType" resultType="com.courier.db.entity.Report">
+        SELECT
+        sendNo,
+        collectNo,
+        failedNo,
+        countTime
+        FROM orgReport WHERE 1=1
+        <if test="orgCode != null">
+            AND orgCode = #{orgCode}
+        </if>
+        <if test="branchCode != null">
+            AND branchCode = #{branchCode}
+        </if>
+        <if test="provinceCode != null">
+            AND provinceCode = #{provinceCode}
+        </if>
+        <if test="beginT != null">
+            AND countTime &gt;= #{beginT}
+        </if>
+        and `type` = #{type} order by countTime desc limit 0, #{limit}
+    </select>
+
+    <select id="findOneByKeys" resultType="com.courier.db.entity.Report">
+        SELECT
+            sendNo,
+            collectNo,
+            failedNo,
+            countTime
+        FROM orgReport WHERE 1=1
+        <if test="orgCode != null and orgCode != ''">AND orgCode = #{orgCode} </if>
+        <if test="branchCode != null and branchCode != ''">AND branchCode = #{branchCode} </if>
+        <if test="provinceCode != null and provinceCode != ''"> AND provinceCode = #{provinceCode}</if>
+        <if test="type != null and type != ''"> and `type` = #{type} </if>
+        <if test="countTime != null and countTime != ''"> and `countTime` = #{countTime} </if>
+        <choose>
+            <when test="queryDays != null and queryDays != ''"> order by countTime desc limit #{queryDays} </when>
+            <otherwise> limit 1 </otherwise>
+        </choose>
+    </select>
+    <select id="findMyWorkByProvinceDesc" resultType="com.courier.db.vModel.VReportTotalNum">
+        SELECT
+        IFNULL(SUM(o.sendNo),0) sendNoTotal,IFNULL(SUM(o.collectNo),0) collectNoTotal,IFNULL(SUM(o.failedNo),0) failedNoTotal,re.branchCode
+        from
+        (SELECT DISTINCT branchCode from branch WHERE provinceCode =  #{provinceCode} AND type=1) re LEFT JOIN orgreport o on re.branchCode = o.branchCode
+        WHERE
+        (o.id is null OR o.type=2)
+        AND o.countTime &gt;= concat(#{beginDate},' 00:00:00')
+        AND o.countTime &lt;= concat(#{endDate},' 23:59:59')
+        GROUP BY branchCode ORDER BY sendNoTotal DESC
+        <if test="pageNo != null and pageSize != null">LIMIT #{pageNo} , #{pageSize}</if>
+    </select>
+    <select id="findMyWorkByBranchDesc" resultType="com.courier.db.vModel.VReportTotalNum">
+        SELECT
+        IFNULL(SUM(o.sendNo),0) sendNoTotal,IFNULL(SUM(o.collectNo),0) collectNoTotal,IFNULL(SUM(o.failedNo),0) failedNoTotal,re.orgCode
+        from
+        (SELECT DISTINCT orgCode from branch WHERE branchCode = #{branchCode} ) re LEFT JOIN orgreport o on re.orgCode = o.orgCode
+        WHERE (o.id is null OR o.type=1)
+        AND o.countTime &gt;= concat(#{beginDate},' 00:00:00')
+        AND o.countTime &lt;= concat(#{endDate},' 23:59:59')
+        GROUP BY orgCode ORDER BY sendNoTotal DESC
+        <if test="pageNo != null and pageSize != null">LIMIT #{pageNo} , #{pageSize}</if>
+    </select>
+
+    <select id="queryByRegionKey" resultType="com.courier.db.vModel.VReportTotalNum">
+        SELECT SUM(sendNo) sendNoTotal,SUM(collectNo) collectNoTotal,SUM(failedNo) failedNoTotal
+        FROM orgreport WHERE type = #{type}
+        AND countTime &gt;= concat(#{beginDate},' 00:00:00')
+        AND countTime &lt;= concat(#{endDate},' 23:59:59')
+        <choose>
+            <when test="type != null and type == 1 ">  AND branchCode = #{branchCode} AND orgCode = #{key} </when>
+            <when test="type != null and type == 2 ">  AND provinceCode = #{provinceCode} AND branchCode = #{key} </when>
+            <otherwise> AND 1=0 </otherwise>
+        </choose>
+    </select>
+
+    <select id="findBySort" resultType="com.courier.db.entity.OrgReport">
+        SELECT
+        <if test="type == 1">provinceCode,orgCode,</if>
+        <if test="type == 2">provinceCode,branchCode,</if>
+        <if test="type == 3">provinceCode,</if>
+        sum(sendNo) sendNo,
+        sum(collectNo) collectNo,
+        sum(failedNo) failedNo
+        FROM orgReport
+        WHERE type = #{type}
+        <if test="beginT != null">
+            AND `countTime` &gt;= #{beginT}
+        </if>
+        <if test="endT != null">
+            AND `countTime` &lt;= #{endT}
+        </if>
+        <if test="type == 1">GROUP BY provinceCode,orgCode</if>
+        <if test="type == 2">GROUP BY provinceCode,branchCode</if>
+        <if test="type == 3">GROUP BY provinceCode</if>
+        ORDER BY sum(sendNo) DESC
+        limit #{index}, #{limit}
+    </select>
+    <select id="countBySort" resultType="java.lang.Integer">
+        SELECT
+        <if test="type == 1">COUNT(DISTINCT(orgCode))</if>
+        <if test="type == 2">COUNT(DISTINCT(branchCode))</if>
+        <if test="type == 3">COUNT(DISTINCT(provinceCode))</if>
+        FROM orgReport
+        WHERE type = #{type}
+        <if test="beginT != null">
+            AND `countTime` &gt;= #{beginT}
+        </if>
+        <if test="endT != null">
+            AND `countTime` &lt;= #{endT}
+        </if>
+    </select>
+</mapper>

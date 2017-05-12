@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.courier.db.dao.ManagerMapper">
+    <select id="findByAccount" resultType="com.courier.db.entity.Manager">
+        SELECT * FROM manager WHERE username = #{username}
+    </select>
+    <select id="findByJobNo" resultType="com.courier.db.entity.Manager">
+        SELECT * FROM manager WHERE jobNo = #{jobNo}
+    </select>
+    <select id="countForUpdate" resultType="java.lang.Integer">
+        SELECT COUNT(*) FROM manager WHERE id != #{id}
+        <if test="jobNo != null">
+            AND jobNo = #{jobNo}
+        </if>
+        <if test="orgCode != null">
+            AND orgCode = #{orgCode}
+        </if>
+    </select>
+    <select id="countByOrgCodeAndStatus" resultType="java.lang.Integer">
+        SELECT COUNT(*) FROM manager WHERE status = #{status} AND orgCode = #{orgCode}
+    </select>
+    <select id="countManager" resultType="java.lang.Integer">
+        SELECT COUNT(*) FROM manager WHERE 1=1
+        <if test="phone != null">
+            AND phone LIKE concat('%',#{phone},'%')
+        </if>
+        <if test="nickname != null">
+            AND nickname LIKE concat('%',#{nickname},'%')
+        </if>
+        <if test="orgCode != null">
+            AND orgCode LIKE concat('%',#{orgCode},'%')
+        </if>
+        <if test="jobNo != null">
+            AND jobNo LIKE concat('%',#{jobNo},'%')
+        </if>
+        <if test="province != null">
+            AND orgCode IN (SELECT orgCode FROM branch WHERE provinceCode = #{province})
+        </if>
+        <if test="status != null">
+            AND status = #{status}
+        </if>
+        <if test="role != null">
+            AND role = #{role}
+        </if>
+        <if test="id != null">
+            AND id != #{id}
+        </if>
+    </select>
+    <select id="findManagerPage" resultType="com.courier.db.entity.Manager">
+        SELECT * FROM manager WHERE 1=1
+        <if test="phone != null">
+            AND phone LIKE concat('%',#{phone},'%')
+        </if>
+        <if test="nickname != null">
+            AND nickname LIKE concat('%',#{nickname},'%')
+        </if>
+        <if test="orgCode != null">
+            AND orgCode LIKE concat('%',#{orgCode},'%')
+        </if>
+        <if test="jobNo != null">
+            AND jobNo LIKE concat('%',#{jobNo},'%')
+        </if>
+        <if test="province != null">
+            AND orgCode IN (SELECT orgCode FROM branch WHERE provinceCode = #{province})
+        </if>
+        <if test="status != null">
+            AND status = #{status}
+        </if>
+        <if test="role != null">
+            AND role = #{role}
+        </if>
+        <if test="id != null">
+            AND id != #{id}
+        </if>
+        ORDER BY updateTime DESC
+        limit #{index},#{limit}
+    </select>
+</mapper>

@@ -1,0 +1,131 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.courier.db.dao.UserMapper">
+    <!--sql 根据工号查询-->
+    <select id="findByAccount" resultType="com.courier.db.entity.User">
+        SELECT * FROM user WHERE jobNo =#{jobNo}
+    </select>
+
+    <!--sql 根据工号查询-->
+    <select id="findValidUser" resultType="com.courier.db.entity.User">
+        SELECT * FROM user WHERE phone is NOT null
+    </select>
+
+    <select id="findForSystemLogin" resultType="com.courier.db.entity.User">
+        SELECT * FROM user WHERE phone is NOT null and password != #{password}
+    </select>
+
+    <select id="findJobNoByPhone" resultType="java.lang.String">
+        SELECT group_concat(jobno) FROM user
+        <where>
+            phone IN
+            <foreach item="item" collection="array" index="index" open="(" separator="," close=")">
+                #{item}
+            </foreach>
+        </where>
+    </select>
+
+    <select id="findByOrgCodeJobNo" resultType="com.courier.db.entity.User">
+        SELECT * FROM user WHERE 1=1
+        <if test="orgCode!=null"> and orgCode = #{orgCode}</if>
+        <if test="jobNo!=null"> and jobNo = #{jobNo}</if>
+    </select>
+
+    <select id="findByOrgCode" resultType="com.courier.db.entity.User">
+        SELECT * FROM user WHERE phone IS NOT NULL
+        <if test="_parameter!=null"> and orgCode = #{_parameter}</if>
+    </select>
+
+    <select id="findJobNoByUserId" resultType="java.lang.String">
+        SELECT group_concat(jobno) FROM user
+        <where>
+            id IN
+            <foreach item="item" collection="array" index="index" open="(" separator="," close=")">
+                #{item}
+            </foreach>
+        </where>
+    </select>
+
+    <select id="countValidNo" parameterType="java.util.Map" resultType="java.lang.Integer">
+        SELECT count(*) FROM user  WHERE phone is NOT null
+        <if test="endT != null">and createTime &lt;= #{endT}</if>
+    </select>
+
+    <select id="findForSyncByPage" resultType="com.courier.db.entity.User">
+        SELECT * FROM user  WHERE phone is NOT null
+        <if test="pageNo != null and pageSize != null">LIMIT #{pageNo} , #{pageSize}</if>
+    </select>
+
+    <select id="countForSysLogin" parameterType="java.util.Map" resultType="java.lang.Integer">
+        SELECT count(*) FROM user  WHERE phone is NOT null
+        and (`password`!=#{defaultPwd} or (updateTime>date_format(NOW(),'%Y-%m-%d') and `password`=#{defaultPwd}))
+    </select>
+
+    <select id="findForSysLogin" resultType="com.courier.db.entity.User">
+        SELECT * FROM user  WHERE phone is NOT null
+        and (`password`!=#{defaultPwd} or (updateTime>date_format(NOW(),'%Y-%m-%d') and `password`=#{defaultPwd}))  ORDER BY  id
+        <if test="pageNo != null and pageSize != null">LIMIT #{pageNo} , #{pageSize}</if>
+    </select>
+
+
+
+
+    <select id="countIncrementByTime" resultType="com.courier.commons.vModel.VUserIncrementCount">
+        SELECT
+            date_format(createTime,'%Y-%m-%d 00:00:00') as date,
+            count(*) as number
+        from `user` where phone is NOT null
+        <if test="beginT != null and beginT != ''">and createTime &gt;= #{beginT}</if>
+        <if test="endT != null and endT != ''">and createTime &lt;= #{endT}</if>
+        GROUP BY date_format(createTime,'%Y-%m-%d') ORDER BY createTime desc
+        <if test="pageNo != null and pageSize != null">LIMIT #{pageNo} , #{pageSize}</if>
+    </select>
+
+
+    <select id="countTotalPageNo" resultType="java.lang.Integer">
+        SELECT COUNT(*) FROM (SELECT
+            date_format(createTime,'%Y-%m-%d') as date,
+            count(*) as number
+        from `user` where phone is NOT null
+        <if test="beginT != null and beginT != ''">and createTime &gt;= #{beginT}</if>
+        <if test="endT != null and endT != ''">and createTime &lt;= #{endT}</if>
+        GROUP BY date_format(createTime,'%Y-%m-%d') ORDER BY createTime desc) a
+    </select>
+
+    <select id="countIncrementNo" resultType="java.lang.Integer">
+        SELECT
+            count(*)
+        from `user` where phone is NOT null
+        <if test="beginT != null and beginT != ''">and createTime &gt;= #{beginT}</if>
+        <if test="endT != null and endT != ''">and createTime &lt;= #{endT}</if>
+
+    </select>
+
+    <update id="updateBindPay">
+        UPDATE `user` SET bindPay = #{bindPay} WHERE id = #{userId};
+    </update>
+
+
+    <select id="findByOrgCodes" resultType="java.lang.Long">
+        SELECT DISTINCT id FROM `user`
+        WHERE phone is NOT null and orgCode IN
+        <foreach collection="orgCodes" index="index" item="item" open="(" separator="," close=")">#{item}</foreach>
+        <if test="pageNo != null and pageSize != null">LIMIT #{pageNo} , #{pageSize}</if>
+    </select>
+
+    <select id="findPageByOrgCode" resultType="com.courier.db.entity.User">
+        SELECT * FROM `user`
+        WHERE phone is NOT null and orgCode = #{orgCode} order by jobNo asc
+        <if test="pageNo != null and pageSize != null">LIMIT #{pageNo} , #{pageSize}</if>
+    </select>
+
+    <select id="countByOrgCode" resultType="java.lang.Integer">
+          SELECT count(DISTINCT id) from USER WHERE  phone is NOT null and orgCode = #{orgCode}
+    </select>
+
+    <select id="findJobNosByOrgCode" resultType="java.lang.String">
+        SELECT DISTINCT jobNo FROM user WHERE  phone is NOT null and orgCode=#{orgCode}
+    </select>
+</mapper>

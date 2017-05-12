@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.courier.db.dao.PayReportMapper">
+    <!--  批量插入  -->
+    <insert id="batchInsert" parameterType="java.util.List">
+        <selectKey keyProperty="fetchTime" order="BEFORE" resultType="java.lang.String">SELECT CURRENT_TIMESTAMP() </selectKey>
+        insert into payReport ( userId, collectionAmount, refundAmount, cancelAmount, sysCancelAmount, countTime, `type`, createTime, updateTime) values
+        <foreach collection="list" item="item" index="index" separator=",">
+            ( #{item.userId}, #{item.collectionAmount}, #{item.refundAmount}, #{item.cancelAmount}, #{item.sysCancelAmount}, #{item.countTime}, #{item.type}, #{fetchTime},#{fetchTime} )
+        </foreach>
+    </insert>
+
+    <!--  多条件查询  -->
+    <select id="buildByFilters" resultType="com.courier.db.entity.PayReport">
+        SELECT
+        <if test="groupBy != null">userId, </if>
+        IFNULL(sum(collectionAmount), 0) collectionAmount,
+        IFNULL(sum(refundAmount), 0) refundAmount,
+        IFNULL(sum(cancelAmount), 0) cancelAmount,
+        IFNULL(sum(sysCancelAmount), 0) sysCancelAmount,
+        #{code} as `type`,
+        #{countT} as countTime
+        FROM payReport WHERE 1=1
+        <if test="types != null"> and `type` in
+            <foreach collection="types" index="index" item="item" open="(" separator="," close=")">#{item}</foreach>
+        </if>
+        <if test="beginT != null"> and countTime &gt;= #{beginT} </if>
+        <if test="endT != null"> and countTime &lt;= #{endT} </if>
+        <if test="groupBy != null">
+            <if test="groupBy == 'userId'">GROUP BY userId</if>
+        </if>
+    </select>
+
+
+    <!--  批量删除  -->
+    <delete id="delDataForInsert">
+        delete from payReport where `type` IN (3, 5, 6)
+    </delete>
+
+    <!--  全网当月平均  -->
+    <select id="findMonthAvg" resultType="com.courier.db.entity.PayReport">
+        SELECT
+        IFNULL(avg(collectionAmount), 0) collectionAmount,
+        IFNULL(avg(refundAmount), 0) refundAmount,
+        IFNULL(avg(cancelAmount), 0) cancelAmount,
+        IFNULL(avg(sysCancelAmount), 0) sysCancelAmount,
+        #{code} as `type`,
+        #{countT} as countTime
+        from
+        (
+        SELECT
+        IFNULL(sum(collectionAmount), 0) collectionAmount,
+        IFNULL(sum(refundAmount), 0) refundAmount,
+        IFNULL(sum(cancelAmount), 0) cancelAmount,
+        IFNULL(sum(sysCancelAmount), 0) sysCancelAmount
+        from payReport WHERE
+        type=1
+        <if test="beginT != null"> and countTime &gt;= #{beginT} </if>
+        <if test="endT != null"> and countTime &lt;= #{endT} </if>
+        GROUP BY userId
+        ) as a
+    </select>
+
+    <select id="findThisMonth" resultType="com.courier.db.entity.PayReport">
+        select *
+        from payReport
+        where type = 1
+        and userId = #{userId}
+        and date_format(countTime,'%Y-%m')=date_format(#{time},'%Y-%m')
+        order by countTime desc
+    </select>
+
+    <select id="findThisDay" resultType="com.courier.db.entity.PayReport">
+        select *
+        from payReport
+        where type = 1
+        and userId = #{userId}
+        and date_format(countTime,'%Y-%m-%d')=#{date}
+        limit 1
+    </select>
+</mapper>

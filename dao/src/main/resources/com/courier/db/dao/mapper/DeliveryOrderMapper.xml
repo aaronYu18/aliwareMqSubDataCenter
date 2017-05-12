@@ -1,0 +1,227 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.courier.db.dao.DeliveryOrderMapper">
+    <!--  多条件查询  -->
+    <select id="findByFilters" resultType="com.courier.db.entity.DeliveryOrder">
+        SELECT * FROM deliveryOrder WHERE 1=1
+        <if test="userId != null">AND userId =#{userId}</if>
+        <if test="status != null">and orderStatus in
+            <foreach collection="status" index="index" item="item" open="(" separator="," close=")">#{item}</foreach>
+        </if>
+        <if test="types != null">and orderType in
+            <foreach collection="types" index="index" item="item" open="(" separator="," close=")">#{item}</foreach>
+        </if>
+        <choose>
+            <when test="timeField =='signTime'">
+                <if test="beginT != null">and signTime &gt;= #{beginT}</if>
+                <if test="endT != null">and signTime &lt;= #{endT}</if>
+            </when>
+            <when test="timeField == 'updateTime'">
+                <if test="beginT != null">and updateTime &gt;= #{beginT}</if>
+                <if test="endT != null">and updateTime &lt;= #{endT}</if>
+            </when>
+            <when test="timeField == 'appSignTime'">
+                <if test="beginT != null">and appSignTime &gt;= #{beginT}</if>
+                <if test="endT != null">and appSignTime &lt;= #{endT}</if>
+            </when>
+            <when test="timeField == 'jGCreateTime'">
+                <if test="beginT != null">and jGCreateTime &gt;= #{beginT}</if>
+                <if test="endT != null">and jGCreateTime &lt;= #{endT}</if>
+            </when>
+            <otherwise>
+                <if test="beginT != null">and createTime &gt;= #{beginT}</if>
+                <if test="endT != null">and createTime &lt;= #{endT}</if>
+            </otherwise>
+        </choose>
+        <if test="expressNo != null">and mailNo = #{expressNo}</if>
+        <if test="orderId != null"> and id = #{orderId} </if>
+        <if test="flag != null"> and flag = #{flag}</if>
+        <if test="sortName != null">
+            order by ${sortName}
+            <if test="sortType == 0">asc</if>
+            <if test="sortType == 1">desc</if>
+        </if>
+        <if test="sortName == null">order by createTime desc</if>
+        <if test="pageNo != null and pageSize != null">LIMIT #{pageNo} , #{pageSize}</if>
+    </select>
+    <!--  多条件统计  -->
+    <select id="countByFilters" parameterType="java.util.Map" resultType="java.lang.Integer">
+        SELECT COUNT(*) FROM deliveryOrder WHERE 1=1
+        <if test="userId != null">AND userId =#{userId}</if>
+        <if test="status != null">and orderStatus in
+            <foreach collection="status" index="index" item="item" open="(" separator="," close=")">#{item}</foreach>
+        </if>
+        <if test="types != null">and orderType in
+            <foreach collection="types" index="index" item="item" open="(" separator="," close=")">#{item}</foreach>
+        </if>
+        <choose>
+            <when test="timeField =='signTime'">
+                <if test="beginT != null">and signTime &gt;= #{beginT}</if>
+                <if test="endT != null">and signTime &lt;= #{endT}</if>
+            </when>
+            <when test="timeField == 'updateTime'">
+                <if test="beginT != null">and updateTime &gt;= #{beginT}</if>
+                <if test="endT != null">and updateTime &lt;= #{endT}</if>
+            </when>
+            <when test="timeField == 'appSignTime'">
+                <if test="beginT != null">and appSignTime &gt;= #{beginT}</if>
+                <if test="endT != null">and appSignTime &lt;= #{endT}</if>
+            </when>
+            <when test="timeField == 'jGCreateTime'">
+                <if test="beginT != null">and jGCreateTime &gt;= #{beginT}</if>
+                <if test="endT != null">and jGCreateTime &lt;= #{endT}</if>
+            </when>
+            <otherwise>
+                <if test="beginT != null">and createTime &gt;= #{beginT}</if>
+                <if test="endT != null">and createTime &lt;= #{endT}</if>
+            </otherwise>
+        </choose>
+        <if test="expressNo != null">and mailNo = #{expressNo}</if>
+        <if test="orderId != null"> and id = #{orderId} </if>
+        <if test="flag != null"> and flag = #{flag} </if>
+    </select>
+    <!--  根据user及面单号查找  -->
+    <select id="findByUIdAndMailNo" resultType="com.courier.db.entity.DeliveryOrder">
+        SELECT * FROM deliveryOrder WHERE 1 = 1
+        <if test="userId  != null">and userId = #{userId}</if>
+        <if test="mailNo != null">and mailNo = #{mailNo} </if>
+    </select>
+
+    <insert id="batchInsert" parameterType="java.util.List">
+      INSERT INTO `deliveryorder`
+      (`userId`, `mailNo`, `collectionMoney`, `freightMoney`, `receiverName`, `receiverPhone`, `receiverProvince`,`receiverProvinceName`,
+       `receiverCity`,`receiverCityName`, `receiverArea`,`receiverAreaName`, `receiverAddress`, `receiverLat`, `receiverLng`, `paymentType`, `orderType`,
+       `signTime`, `appSignTime`, `signPersonName`, `signPersonType`, `failedCode`, `failedDescription`,`hasPicture`,
+       `signPic`, `deviceType`, `mac`, `orderStatus`, `flag`, `jGCreateTime`, `createTime`, `updateTime`, `isProblem`, `isWanted`, `isCnAppoint`, `cnAppointBeginT`, `cnAppointEndT`, `moneyDeliver`)
+      VALUES
+      <foreach collection="list" item="orders" index="index" separator="," >
+          (#{orders.userId},#{orders.mailNo},#{orders.collectionMoney},#{orders.freightMoney},#{orders.receiverName},#{orders.receiverPhone},#{orders.receiverProvince},#{orders.receiverProvinceName},
+           #{orders.receiverCity},#{orders.receiverCityName},#{orders.receiverArea},#{orders.receiverAreaName},#{orders.receiverAddress},#{orders.receiverLat},#{orders.receiverLng},#{orders.paymentType},#{orders.orderType},
+           #{orders.signTime},#{orders.appSignTime},#{orders.signPersonName},#{orders.signPersonType},#{orders.failedCode},#{orders.failedDescription},
+          <if test="orders.hasPicture != null">
+              #{orders.hasPicture},
+          </if>
+          <if test="orders.hasPicture == null">
+              0,
+          </if>
+           #{orders.signPic},#{orders.deviceType},#{orders.mac},#{orders.orderStatus},
+          <if test="orders.flag != null">
+              #{orders.flag},
+          </if>
+          <if test="orders.flag == null">
+              1,
+          </if>
+          #{orders.jGCreateTime},#{orders.createTime},#{orders.updateTime},#{orders.isProblem},#{orders.isWanted},#{orders.isCnAppoint},#{orders.cnAppointBeginT},#{orders.cnAppointEndT},#{orders.moneyDeliver})
+      </foreach>
+    </insert>
+
+    <update id="batchUpdateByUidAndMailNo" parameterType="List">
+        <foreach collection="list" item="orders" separator=";">
+            UPDATE  deliveryorder
+            <set>
+                userId = #{orders.userId},
+                collectionMoney = #{orders.collectionMoney},
+                freightMoney = #{orders.freightMoney},
+                receiverName = #{orders.receiverName},
+                receiverPhone = #{orders.receiverPhone},
+                receiverProvince = #{orders.receiverProvince},
+                receiverProvinceName = #{orders.receiverProvinceName},
+                receiverCity = #{orders.receiverCity},
+                receiverCityName = #{orders.receiverCityName},
+                receiverArea = #{orders.receiverArea},
+                receiverAreaName = #{orders.receiverAreaName},
+                receiverAddress = #{orders.receiverAddress},
+                receiverLat = #{orders.receiverLat},
+                receiverLng = #{orders.receiverLng},
+                paymentType = #{orders.paymentType},
+                orderType = #{orders.orderType},
+                signTime = #{orders.signTime},
+                appSignTime = #{orders.appSignTime},
+                signPersonName = #{orders.signPersonName},
+                signPersonType = #{orders.signPersonType},
+                failedCode = #{orders.failedCode},
+                failedDescription = #{orders.failedDescription},
+                <if test="orders.hasPicture != null">
+                    hasPicture = #{orders.hasPicture},
+                </if>
+                signPic = #{orders.signPic},
+                deviceType = #{orders.deviceType},
+                mac = #{orders.mac},
+                orderStatus = #{orders.orderStatus},
+                <if test="orders.flag != null">
+                    flag = #{orders.flag},
+                </if>
+                jGCreateTime = #{orders.jGCreateTime},
+                updateTime = now(),
+                isProblem = #{orders.isProblem},
+                isWanted = #{orders.isWanted},
+                isCnAppoint = #{orders.isCnAppoint},
+                cnAppointBeginT = #{orders.cnAppointBeginT},
+                cnAppointEndT = #{orders.cnAppointEndT},
+                moneyDeliver = #{orders.moneyDeliver}
+            </set>
+            <where>mailNo = #{orders.mailNo} and (orderStatus = 0 or orderStatus = 2)</where>
+        </foreach>
+    </update>
+
+    <delete id="batchDelete" parameterType="java.util.List">
+        DELETE FROM deliveryOrder WHERE id IN
+        <foreach collection="list" index="index" item="orders" open="(" separator="," close=")">
+            #{orders.id}
+        </foreach>
+    </delete>
+
+    <delete id="batchDeleteByMailNoAndStatus" parameterType="java.util.List">
+        DELETE FROM deliveryOrder WHERE mailNo IN
+        <foreach collection="list" index="index" item="orders" open="(" separator="," close=")">
+            #{orders}
+        </foreach>
+        and (orderStatus = 0 or orderStatus = 2)
+    </delete>
+
+    <select id="findDelivery" resultType="com.courier.db.entity.DeliveryOrder">
+        SELECT * FROM deliveryOrder WHERE userId = #{userId} AND mailNo = #{mailNo} limit 1;
+    </select>
+
+    <!--  多条件查询  -->
+    <select id="findHistoryByFilters" resultType="com.courier.db.entity.DeliveryOrder">
+        SELECT * FROM deliveryOrderHistory WHERE 1=1
+        <if test="userId != null">AND userId =#{userId}</if>
+        <if test="status != null">and orderStatus in
+            <foreach collection="status" index="index" item="item" open="(" separator="," close=")">#{item}</foreach>
+        </if>
+        <if test="types != null">and orderType in
+            <foreach collection="types" index="index" item="item" open="(" separator="," close=")">#{item}</foreach>
+        </if>
+        <if test="beginT != null">and signTime &gt;= #{beginT}</if>
+        <if test="endT != null">and signTime &lt;= #{endT}</if>
+        <if test="expressNo != null">and mailNo = #{expressNo}</if>
+        <if test="orderId != null"> and id = #{orderId} </if>
+        <if test="flag != null"> and flag = #{flag}</if>
+        <if test="sortName != null">
+            order by ${sortName}
+            <if test="sortType == 0">asc</if>
+            <if test="sortType == 1">desc</if>
+        </if>
+        <if test="sortName == null">order by createTime desc</if>
+        <if test="pageNo != null and pageSize != null">LIMIT #{pageNo} , #{pageSize}</if>
+    </select>
+    <!--  多条件统计  -->
+    <select id="countHistoryByFilters" parameterType="java.util.Map" resultType="java.lang.Integer">
+        SELECT COUNT(*) FROM deliveryOrderHistory WHERE 1=1
+        <if test="userId != null">AND userId =#{userId}</if>
+        <if test="status != null">and orderStatus in
+            <foreach collection="status" index="index" item="item" open="(" separator="," close=")">#{item}</foreach>
+        </if>
+        <if test="types != null">and orderType in
+            <foreach collection="types" index="index" item="item" open="(" separator="," close=")">#{item}</foreach>
+        </if>
+        <if test="beginT != null">and signTime &gt;= #{beginT}</if>
+        <if test="endT != null">and signTime &lt;= #{endT}</if>
+        <if test="expressNo != null">and mailNo = #{expressNo}</if>
+        <if test="orderId != null"> and id = #{orderId} </if>
+        <if test="flag != null"> and flag = #{flag} </if>
+    </select>
+</mapper>
